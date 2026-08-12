@@ -772,24 +772,45 @@
             </svg>`
         };
 
-        // Stage 0B: browser is the only supported runtime.
-        // Desktop, mobile browser and a future PWA use the same engine.
+        // Stage 0C: one browser runtime, with isolated run/profile persistence.
+        const STORAGE_NAMESPACE = 'heart_at_crossroads_beta2:v1:';
+        const RUN_STORAGE_KEY = 'run';
+        const PROFILE_STORAGE_KEY = 'profile';
+        const ACCESS_STORAGE_KEY = 'tempAccessGranted';
+        const STATE_VERSION = 1;
+
+        const DEFAULT_PROFILE_STATE = Object.freeze({
+            language: "ru",
+            isAuthorized: false,
+            memories: [],
+            completionCount: 0
+        });
+
+        let profileState = {
+            ...DEFAULT_PROFILE_STATE,
+            memories: []
+        };
+
+        function createFreshRunStats(hasReturnedViaMenu = false) {
+            return {
+                crown: 0,
+                heart: 0,
+                leaf: 0,
+                diamonds: 10,
+                relationships: { mark: 0, lera: 0, vika: 0, sergey: 0, anna: 0, dima: 0, lesha: 0 },
+                appearance: "style1",
+                hasReturnedViaMenu,
+                language: profileState.language,
+                isAuthorized: profileState.isAuthorized,
+                memories: [...profileState.memories],
+                completionCount: profileState.completionCount
+            };
+        }
+
         let currentChapter = 1;
         let currentScene = 0;
         let choices = [];
-        let stats = {
-            crown: 0,
-            heart: 0,
-            leaf: 0,
-            diamonds: 100,
-            relationships: { mark: 0, lera: 0, vika: 0, sergey: 0, anna: 0, dima: 0, lesha: 0 },
-            appearance: "style1",
-            isAuthorized: false,
-            memories: [],
-            language: "ru",
-            hasReturnedViaMenu: false,
-            completionCount: 0
-        };
+        let stats = createFreshRunStats(false);
         let isTyping = false;
         let scriptData = null;
         let currentBackground = null;
@@ -834,12 +855,15 @@
             setTimeout(() => errorDiv.remove(), 3000);
         }
 
-        // Browser-only persistence (Stage 0B). Legacy platform storage was removed intentionally.
+        // Browser-only persistence. Keys are namespaced because all oopsid.github.io projects share one origin.
+        function storageKey(key) {
+            return `${STORAGE_NAMESPACE}${key}`;
+        }
+
         function saveToStorage(key, value) {
             return new Promise((resolve, reject) => {
                 try {
-                    localStorage.setItem(key, value);
-                    console.log(`Сохранено в localStorage: ${key}`);
+                    localStorage.setItem(storageKey(key), String(value));
                     resolve();
                 } catch (error) {
                     console.error(`Ошибка сохранения в localStorage: ${key}`, error);
@@ -851,9 +875,7 @@
         function getFromStorage(key) {
             return new Promise((resolve, reject) => {
                 try {
-                    const value = localStorage.getItem(key);
-                    console.log(`Получено из localStorage: ${key}`);
-                    resolve(value);
+                    resolve(localStorage.getItem(storageKey(key)));
                 } catch (error) {
                     console.error(`Ошибка чтения localStorage: ${key}`, error);
                     reject(error);
@@ -864,8 +886,7 @@
         function removeFromStorage(key) {
             return new Promise((resolve, reject) => {
                 try {
-                    localStorage.removeItem(key);
-                    console.log(`Удалено из localStorage: ${key}`);
+                    localStorage.removeItem(storageKey(key));
                     resolve();
                 } catch (error) {
                     console.error(`Ошибка удаления из localStorage: ${key}`, error);
@@ -874,21 +895,103 @@
             });
         }
 
-        function saveSession() {
-            const sessionData = JSON.stringify({
+        function normalizeProfile(candidate) {
+            const value = candidate && typeof candidate === 'object' ? candidate : {};
+            return {
+                language: value.language === 'en' ? 'en' : 'ru',
+                isAuthorized: value.isAuthorized === true,
+                memories: Array.isArray(value.memories) ? [...new Set(value.memories.filter(v => typeof v === 'string'))] : [],
+                completionCount: Number.isInteger(value.completionCount) && value.completionCount >= 0 ? value.completionCount : 0
+            };
+        }
+
+        function syncProfileFromStats() {
+            profileState = normalizeProfile({
+                language: stats.language,
+                isAuthorized: stats.isAuthorized,
+                memories: stats.memories,
+                completionCount: stats.completionCount
+            });
+        }
+
+        function applyProfileToStats() {
+            stats.language = profileState.language;
+            stats.isAuthorized = profileState.isAuthorized;
+            stats.memories = [...profileState.memories];
+            stats.completionCount = profileState.completionCount;
+        }
+
+        async function saveProfile() {
+            syncProfileFromStats();
+            await saveToStorage(PROFILE_STORAGE_KEY, JSON.stringify({
+                version: STATE_VERSION,
+                ...profileState
+            }));
+        }
+
+        async function loadProfile() {
+            const rawProfile = await getFromStorage(PROFILE_STORAGE_KEY);
+            if (!rawProfile) {
+                profileState = normalizeProfile(DEFAULT_PROFILE_STATE);
+                applyProfileToStats();
+                return false;
+            }
+            try {
+                const parsed = JSON.parse(rawProfile);
+                profileState = normalizeProfile(parsed);
+                applyProfileToStats();
+                return true;
+            } catch (error) {
+                console.warn('Повреждён профиль beta_2, использованы значения по умолчанию:', error);
+                profileState = normalizeProfile(DEFAULT_PROFILE_STATE);
+                applyProfileToStats();
+                return false;
+            }
+        }
+
+        function serializeRunState() {
+            return {
+                version: STATE_VERSION,
                 currentScene,
                 currentChapter,
-                stats,
-                choices
-            });
-            saveToStorage('gameSession', sessionData)
-                .then(() => {
-                    console.log('Сессия успешно сохранена');
-                })
-                .catch(error => {
-                    console.error('Ошибка сохранения сессии:', error);
-                    showDebugMessage('Ошибка сохранения сессии');
-                });
+                choices: [...choices],
+                stats: {
+                    crown: stats.crown,
+                    heart: stats.heart,
+                    leaf: stats.leaf,
+                    diamonds: stats.diamonds,
+                    relationships: { ...stats.relationships },
+                    appearance: stats.appearance,
+                    hasReturnedViaMenu: stats.hasReturnedViaMenu === true
+                }
+            };
+        }
+
+        function validateRunState(session) {
+            if (!session || typeof session !== 'object') throw new Error('run state is not an object');
+            if (session.version !== STATE_VERSION) throw new Error(`unsupported run version: ${session.version}`);
+            if (!Number.isInteger(session.currentChapter) || session.currentChapter < 1 || session.currentChapter > 10) throw new Error('invalid currentChapter');
+            if (!Number.isInteger(session.currentScene) || session.currentScene < 0) throw new Error('invalid currentScene');
+            if (!Array.isArray(session.choices)) throw new Error('invalid choices');
+            if (!session.stats || typeof session.stats !== 'object') throw new Error('invalid stats');
+            return session;
+        }
+
+        async function saveSession() {
+            try {
+                await saveProfile();
+                await saveToStorage(RUN_STORAGE_KEY, JSON.stringify(serializeRunState()));
+                console.log('Прохождение beta_2 сохранено');
+                return true;
+            } catch (error) {
+                console.error('Ошибка сохранения прохождения:', error);
+                showDebugMessage('Ошибка сохранения сессии');
+                return false;
+            }
+        }
+
+        async function deleteRun() {
+            await removeFromStorage(RUN_STORAGE_KEY);
         }
 
         // Утилита для событий
@@ -924,7 +1027,10 @@
             function handleContinueGame(e) {
                 e.preventDefault();
                 console.log('handleContinueGame вызван');
-                checkTempPassword(() => loadSession(() => startGame()));
+                checkTempPassword(async () => {
+                    const loaded = await loadSession();
+                    if (loaded) startGame();
+                });
             }
 
             function handleShowPassword(e) {
@@ -954,12 +1060,17 @@
                 }
             }
 
-            function handleMenu(e) {
+            async function handleMenu(e) {
                 e.preventDefault();
-                console.log('handleMenu вызван');
+                console.log('handleMenu вызван: текущее прохождение уничтожается');
                 stats.hasReturnedViaMenu = true;
-                resetGameState();
-                saveSession();
+                try {
+                    await saveProfile();
+                    await deleteRun();
+                } catch (error) {
+                    console.error('Не удалось удалить текущее прохождение:', error);
+                }
+                resetGameState(true);
                 showStartScreen();
             }
 
@@ -984,7 +1095,7 @@
                 stats.language = stats.language === "ru" ? "en" : "ru";
                 languageIcon.textContent = stats.language === "ru" ? "🇷🇺" : "🇬🇧";
                 updateLanguage(stats.language);
-                saveSession();
+                saveProfile();
             }
 
             // Привязка событий
@@ -1010,15 +1121,15 @@
             });
             document.getElementById('password-form').appendChild(backButton);
 
-            // Инициализация
-            getFromStorage('last_session')
-                .then(session => {
-                    console.log('Сессия загружена:', session);
-                    if (session) showStartScreen();
-                    else showStartScreen();
+            // Инициализация: профиль переживает reload, run загружается только кнопкой «Продолжить».
+            loadProfile()
+                .then(() => {
+                    updateLanguage(stats.language);
+                    languageIcon.textContent = stats.language === "ru" ? "🇷🇺" : "🇬🇧";
+                    showStartScreen();
                 })
                 .catch(error => {
-                    console.error('Ошибка загрузки сессии:', error);
+                    console.error('Ошибка загрузки профиля:', error);
                     showStartScreen();
                 });
         });
@@ -1044,24 +1155,12 @@
     galleryContainer.style.display = 'none'; // Убеждаемся, что галерея скрыта
 }
 
-        function resetGameState() {
+        function resetGameState(hasReturnedViaMenu = false) {
             console.log('resetGameState вызван');
             currentChapter = 1;
             currentScene = 0;
             choices = [];
-            stats = {
-                crown: 0,
-                heart: 0,
-                leaf: 0,
-                diamonds: 10,
-                relationships: { mark: 0, lera: 0, vika: 0, sergey: 0, anna: 0, dima: 0, lesha: 0 },
-                appearance: "style1",
-                isAuthorized: stats.isAuthorized,
-                memories: [],
-                language: stats.language,
-                hasReturnedViaMenu: true,
-                completionCount: stats.completionCount
-            };
+            stats = createFreshRunStats(hasReturnedViaMenu);
             currentBackground = null;
         }
 
@@ -1101,26 +1200,45 @@
             }
         }
 
-        function startNewGame() {
+        async function startNewGame() {
             console.log('startNewGame вызван');
-            resetGameState();
-            saveSession();
+            resetGameState(false);
+            await saveSession();
             startGame();
         }
 
-        async function loadSession(callback) {
+        async function loadSession() {
             try {
-                const session = await getFromStorage('last_session');
-                if (session) {
-                    currentChapter = session.currentChapter;
-                    currentScene = session.currentScene;
-                    choices = session.choices;
-                    stats = { ...stats, ...session.stats };
-                    console.log('Сессия загружена:', session);
+                await loadProfile();
+                const rawSession = await getFromStorage(RUN_STORAGE_KEY);
+                if (!rawSession) {
+                    showErrorMessage(stats.language === "ru" ? 'Нет сохранённого прохождения' : 'No saved playthrough');
+                    return false;
                 }
-                if (callback) callback();
+
+                const session = validateRunState(JSON.parse(rawSession));
+                const runStats = session.stats;
+                currentChapter = session.currentChapter;
+                currentScene = session.currentScene;
+                choices = [...session.choices];
+                stats = createFreshRunStats(runStats.hasReturnedViaMenu === true);
+                stats.crown = Number(runStats.crown) || 0;
+                stats.heart = Number(runStats.heart) || 0;
+                stats.leaf = Number(runStats.leaf) || 0;
+                stats.diamonds = Number.isFinite(Number(runStats.diamonds)) ? Number(runStats.diamonds) : 10;
+                stats.relationships = {
+                    ...stats.relationships,
+                    ...(runStats.relationships && typeof runStats.relationships === 'object' ? runStats.relationships : {})
+                };
+                stats.appearance = typeof runStats.appearance === 'string' ? runStats.appearance : 'style1';
+                applyProfileToStats();
+                console.log('Прохождение beta_2 восстановлено:', { currentChapter, currentScene });
+                return true;
             } catch (error) {
-                console.error('Ошибка загрузки сессии:', error);
+                console.error('Ошибка загрузки прохождения:', error);
+                await deleteRun().catch(() => {});
+                showErrorMessage(stats.language === "ru" ? 'Сохранение повреждено и удалено' : 'Saved game was corrupted and removed');
+                return false;
             }
         }
 
@@ -2567,6 +2685,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
         // Добавляем карточку в разблокированные
         if (!stats.memories) stats.memories = [];
         stats.memories.push(card.id);
+        saveProfile();
 
         // Обновляем карточку в галерее
         const cardElement = cardsContainer.querySelector(`[data-card-id="${card.id}"]`);
@@ -2853,10 +2972,12 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             epilogueDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); color: white; display: flex; justify-content: center; align-items: center; text-align: center; padding: 20px; z-index: 10;';
             epilogueDiv.textContent = epilogueText;
             document.body.appendChild(epilogueDiv);
-            setTimeout(() => {
+            setTimeout(async () => {
                 epilogueDiv.remove();
                 stats.completionCount++;
-                saveSession();
+                await saveProfile();
+                await deleteRun();
+                resetGameState(false);
                 showStartScreen();
             }, 5000);
         }
