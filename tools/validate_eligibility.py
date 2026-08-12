@@ -79,6 +79,13 @@ def main():
     finals = json.loads((DATA / 'finals.json').read_text(encoding='utf-8-sig'))
     endings = {ending['id']: ending for ending in finals.get('endings', []) if isinstance(ending, dict) and ending.get('id')}
 
+    fallbacks = [ending for ending in endings.values() if ending.get('fallback') is True]
+    if len(fallbacks) != 1:
+        raise SystemExit(f'exactly one fallback ending is required, found {[ending.get("id") for ending in fallbacks]}')
+    fallback = fallbacks[0]
+    if fallback.get('requirements') != {'all': []}:
+        raise SystemExit(f'fallback ending {fallback.get("id")} must be unconditional')
+
     if set(endings) != set(ENDING_PROJECTIONS):
         raise SystemExit(f'ending ids mismatch: data={sorted(endings)}, analyzer={sorted(ENDING_PROJECTIONS)}')
 

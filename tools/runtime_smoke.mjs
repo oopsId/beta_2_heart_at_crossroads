@@ -256,6 +256,8 @@ result = await page.evaluate(async () => {
   await handleChoices(scene5, box, null, generation);
   const lockedDima = box.querySelector('[data-choice-id="dima"]')?.disabled === true;
   const lockedMark = box.querySelector('[data-choice-id="mark"]')?.disabled === true;
+  const fallbackButton = box.querySelector('[data-choice-id="premium"]');
+  const fallbackAvailable = fallbackButton?.disabled === false && fallbackButton?.dataset.eligible === 'true';
   const forced = await applyChoice(scene5.choices.find(choice => choice.id === 'mark'), { generation });
 
   clearDialogueHandlers(box);
@@ -269,6 +271,7 @@ result = await page.evaluate(async () => {
   const snapshot = {
     lockedDima,
     lockedMark,
+    fallbackAvailable,
     forced,
     unlockedDima,
     premiumHasCost: Object.prototype.hasOwnProperty.call(premium, 'cost'),
@@ -278,6 +281,7 @@ result = await page.evaluate(async () => {
   return snapshot;
 });
 assert(result.lockedDima && result.lockedMark && result.forced === false, 'Locked final route can be selected before eligibility', JSON.stringify(result));
+assert(result.fallbackAvailable, 'Reachable final state can have every ending locked; New Start fallback must remain available', JSON.stringify(result));
 assert(result.unlockedDima, 'Reachable Dima gate did not unlock before click', JSON.stringify(result));
 assert(result.premiumHasCost === false && !result.premiumText.includes('20 бриллиантов'), 'Impossible 20-diamond final gate remains', JSON.stringify(result));
 results.eligibility = true;

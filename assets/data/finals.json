@@ -332,60 +332,9 @@
                 "en": "Anna stepped into a summer sunset, leaving all that tore her soul. She chose time to piece herself anew, every step pain and light. This was her new start, her breaking, her endless road."
             },
             "requirements": {
-                "all": [
-                    {
-                        "stat": "crown",
-                        "op": ">=",
-                        "value": 5
-                    },
-                    {
-                        "stat": "heart",
-                        "op": ">=",
-                        "value": 5
-                    },
-                    {
-                        "stat": "leaf",
-                        "op": ">=",
-                        "value": 5
-                    },
-                    {
-                        "compare": {
-                            "left": {
-                                "subtract": [
-                                    {
-                                        "max": [
-                                            {
-                                                "stat": "crown"
-                                            },
-                                            {
-                                                "stat": "heart"
-                                            },
-                                            {
-                                                "stat": "leaf"
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        "min": [
-                                            {
-                                                "stat": "crown"
-                                            },
-                                            {
-                                                "stat": "heart"
-                                            },
-                                            {
-                                                "stat": "leaf"
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            "op": "<=",
-                            "right": 5
-                        }
-                    }
-                ]
-            }
+                "all": []
+            },
+            "fallback": true
         }
     ]
 }
