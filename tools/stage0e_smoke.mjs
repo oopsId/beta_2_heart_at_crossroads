@@ -74,7 +74,6 @@ async function prepareTimedScene(chapter, sceneId, seconds) {
   }, { chapter, sceneId, seconds });
 }
 
-// Existing explicit default choice: timeout must apply the same visible `ignore` choice.
 await prepareTimedScene(1, 7, 0.05);
 await page.waitForTimeout(180);
 let state = await page.evaluate(() => ({ chapter: currentChapter, scene: currentScene, choices: [...choices], timer: !!document.getElementById('timer-countdown') }));
@@ -82,15 +81,22 @@ assert(state.chapter === 1 && state.scene === 10, 'Timeout choice did not route 
 assert(state.choices.filter(x => x === 'ignore').length === 1, 'Timeout ignore must be committed exactly once', JSON.stringify(state));
 assert(!state.timer, 'Countdown survived timeout choice', JSON.stringify(state));
 
-// Hidden timeout outcome: no visible reply is selected; story converges without stat/relationship effects.
 await prepareTimedScene(2, 1, 0.05);
 await page.waitForTimeout(180);
-state = await page.evaluate(() => ({ chapter: currentChapter, scene: currentScene, choices: [...choices], crown: stats.crown, heart: stats.heart, mark: stats.relationships.mark, sergey: stats.relationships.sergey, lyosha: stats.relationships.lyosha }));
+state = await page.evaluate(() => ({
+  chapter: currentChapter,
+  scene: currentScene,
+  choices: [...choices],
+  crown: stats.crown,
+  heart: stats.heart,
+  mark: stats.relationships.mark ?? 0,
+  sergey: stats.relationships.sergey ?? 0,
+  lyosha: stats.relationships.lyosha ?? 0
+}));
 assert(state.chapter === 2 && state.scene === 5, 'No-reply timeout did not converge to chapter 2 scene 5', JSON.stringify(state));
 assert(state.choices.filter(x => x === 'no_reply').length === 1, 'No-reply timeout must be recorded exactly once', JSON.stringify(state));
 assert(state.crown === 0 && state.heart === 0 && state.mark === 0 && state.sergey === 0 && state.lyosha === 0, 'No-reply timeout mutated romance/personality stats', JSON.stringify(state));
 
-// Manual answer before deadline must cancel the timeout outcome.
 await prepareTimedScene(2, 1, 0.25);
 await page.locator('.choice-btn').first().click();
 await page.waitForTimeout(400);
