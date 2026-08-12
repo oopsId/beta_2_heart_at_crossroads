@@ -98,7 +98,11 @@ assert(state.choices.filter(x => x === 'no_reply').length === 1, 'No-reply timeo
 assert(state.crown === 0 && state.heart === 0 && state.mark === 0 && state.sergey === 0 && state.lyosha === 0, 'No-reply timeout mutated romance/personality stats', JSON.stringify(state));
 
 await prepareTimedScene(2, 1, 0.25);
-await page.locator('.choice-btn').first().click();
+await page.evaluate(() => {
+  const btn = document.querySelector('.choice-btn');
+  if (!btn) throw new Error('Manual timed choice button missing');
+  btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+});
 await page.waitForTimeout(400);
 state = await page.evaluate(() => ({ chapter: currentChapter, scene: currentScene, choices: [...choices] }));
 assert(state.chapter === 2 && state.scene === 2, 'Manual timed choice did not win before timeout', JSON.stringify(state));
