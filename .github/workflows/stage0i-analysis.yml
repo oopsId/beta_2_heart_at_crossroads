@@ -1,0 +1,25 @@
+name: Stage 0I reachability analysis
+
+on:
+  push:
+    branches:
+      - stage-0i-eligibility-and-runtime
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Analyze reachable final states
+        run: |
+          mkdir -p artifacts
+          python3 tools/reachability.py | tee artifacts/reachability.json
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage0i-reachability
+          path: artifacts/reachability.json
