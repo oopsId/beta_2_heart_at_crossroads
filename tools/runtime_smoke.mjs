@@ -19,7 +19,9 @@ await page.waitForFunction(() =>
   typeof stage0iEnsureFinals === 'function' &&
   typeof stage0iEndingEligible === 'function' &&
   typeof stage0jRenderSceneVisuals === 'function' &&
-  typeof stage0jShowComposeOverlay === 'function'
+  typeof stage0jShowComposeOverlay === 'function' &&
+  typeof stage0kDevForceFirstPlaythrough === 'function' &&
+  typeof stage0kApplyReplayOverride === 'function'
 );
 await page.waitForTimeout(100);
 
@@ -316,6 +318,7 @@ result = await page.evaluate(async () => {
       senders: notifications.map(node => node.dataset.senderId),
       hasAnnaAvatar: hrefs.some(href => href.includes('anna_messenger_ava.png')),
       hasCaret: Boolean(overlay?.querySelector('.stage0j-compose-caret')),
+      phoneBackground: overlay ? getComputedStyle(overlay.querySelector('.stage0j-phone-screen')).backgroundImage : '',
       dialogue: scene.text.ru
     };
     invalidateRuntimeSession('0j-phone-compose-done');
@@ -329,6 +332,7 @@ result = await page.evaluate(async () => {
 assert(result.phoneMode === 'compose' && result.exists, 'Compose phone overlay did not render', JSON.stringify(result));
 assert(result.hasAnnaAvatar && result.hasCaret && result.notifications === 3, 'Compose overlay lost Anna avatar/caret/notifications', JSON.stringify(result));
 assert(result.senders.join(',') === 'lyosha,mark,sergey', 'Compose notification senders drifted from final choices', JSON.stringify(result));
+assert(result.phoneBackground.includes('bg_phone_ui.png') && !result.phoneBackground.includes('linear-gradient'), 'Compose phone lost green messenger background', JSON.stringify(result));
 assert(!result.text.includes('Пальцы замерли') && !result.text.includes('My fingers hovered'), 'Phone overlay duplicates narration text', JSON.stringify(result));
 assert(!result.dialogue.includes('Катя в WhatsApp'), 'Scene narration still contains stale Katya branch that is not selectable', JSON.stringify(result));
 results.phoneOverlay = true;
@@ -351,6 +355,7 @@ result = await page.evaluate(async () => {
   return snapshot;
 });
 assert(result.left >= 0 && result.top >= 0 && result.right <= result.width && result.bottom <= result.height, 'Compose phone is clipped off desktop viewport', JSON.stringify(result));
+assert(Math.abs(((result.left + result.right) / 2) - (result.width / 2)) <= 2, 'Compose phone is not horizontally centered on desktop', JSON.stringify(result));
 
 await page.setViewportSize({ width: 667, height: 375 });
 result = await page.evaluate(async () => {
@@ -382,9 +387,32 @@ result = await page.evaluate(async () => {
   return snapshot;
 });
 assert(result.phone.left >= 0 && result.phone.top >= 0 && result.phone.right <= result.width && result.phone.bottom <= result.height, 'Compose phone is clipped in short landscape', JSON.stringify(result));
+assert(Math.abs(((result.phone.left + result.phone.right) / 2) - (result.width / 2)) <= 2, 'Compose phone is not centered in short landscape', JSON.stringify(result));
+assert(result.dialogue.left <= 1 && result.dialogue.right >= result.width - 1, 'Compose scene displaced/cropped the normal dialogue box', JSON.stringify(result));
 assert(result.overlaps === false, 'Compose phone overlaps dialogue in short landscape', JSON.stringify(result));
 results.phoneLayout = true;
 await page.setViewportSize({ width: 1280, height: 720 });
+
+// 8c. Developer replay override hides alternate narration without changing real completionCount.
+result = await page.evaluate(async () => {
+  const key = 'heart_at_crossroads_beta2:dev:force_first_playthrough';
+  const previousCompletion = stats.completionCount;
+  stats.completionCount = 3;
+  localStorage.setItem(key, '1');
+  const chapter = await (await fetch('assets/data/chapter2.json')).json();
+  const scene = chapter.scenes.find(candidate => candidate.id === 1);
+  stage0kApplyReplayOverride(chapter);
+  const hidden = !Object.prototype.hasOwnProperty.call(scene, 'second_playthrough_text');
+  const completionWhileForced = stats.completionCount;
+  localStorage.removeItem(key);
+  stage0kApplyReplayOverride(chapter);
+  const restored = Object.prototype.hasOwnProperty.call(scene, 'second_playthrough_text');
+  stats.completionCount = previousCompletion;
+  return { hidden, restored, completionWhileForced };
+});
+assert(result.hidden && result.restored, 'Developer replay override did not hide/restore second_playthrough_text', JSON.stringify(result));
+assert(result.completionWhileForced === 3, 'Developer replay override modified completionCount', JSON.stringify(result));
+results.devReplayOverride = true;
 
 // 9. Speaker focus follows the actual displayed character instead of hard-coded Anna/Vika positions.
 result = await page.evaluate(async () => {

@@ -36,12 +36,12 @@
                 "en": "Anna"
             },
             "text": {
-                "ru": "Пальцы замерли над экраном. Три непрочитанных чата — три разные дороги. Я смотрю на мигающий курсор и не могу решить, кому ответить. Все тянут в разные стороны, а я не знаю, куда мне.",
-                "en": "My fingers hovered over the screen. Three unread chats — three different roads. I watch the blinking cursor and cannot decide who to answer. Everyone is pulling me in a different direction, and I do not know where I belong."
+                "ru": "Пальцы замерли над экраном. Лёша ждёт ответа, а я… Что я чувствую? Его зов или свою тень? Все тянут в разные стороны, а я не знаю, куда мне.",
+                "en": "My fingers hovered over the screen. Lyosha’s waiting for a reply, and I… What do I feel? His call or my shadow? Everyone’s pulling me in different directions, and I don’t know where I belong."
             },
             "second_playthrough_text": {
-                "ru": "Пальцы замерли над экраном — всё как в прошлый раз. Три чата, три ниточки. Теперь я уже знаю, что каждый ответ что-то меняет, и всё равно смотрю на курсор, не решаясь выбрать.",
-                "en": "My fingers hovered over the screen — just like last time. Three chats, three threads. Now I already know that every answer changes something, and I still stare at the cursor, unable to choose."
+                "ru": "Пальцы замерли над экраном — всё как в прошлый раз. Лёша ждёт, а я… знаю, что ты уже видел это, да? Но теперь я вижу их игру, и всё равно не знаю, куда идти.",
+                "en": "My fingers hovered over the screen — just like last time. Lyosha is waiting, and I… I know you have seen this before, right? But now I can see their game, and I still do not know where to go."
             },
             "sound": "sfx_phone_vibrate_multiple",
             "music": "bgm_tension_rise",
