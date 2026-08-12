@@ -6,8 +6,7 @@ on:
       - stage-0i-eligibility-and-runtime
     paths:
       - .github/workflows/stage0i-migrate.yml
-      - tools/stage0i_migrate.py
-      - assets/js/stage0i-runtime.js
+      - tools/stage0i_finalize.py
   workflow_dispatch:
 
 permissions:
@@ -20,16 +19,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: stage-0i-eligibility-and-runtime
-      - name: Apply Stage 0I migration
-        run: python3 tools/stage0i_migrate.py
-      - name: Commit migrated runtime and story data
+      - name: Apply Stage 0I final cleanup
+        run: python3 tools/stage0i_finalize.py
+      - name: Commit final cleanup
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add heart_at_crossroads.html assets/data assets/js/stage0i-runtime.js
+          git add assets/data tools/runtime_smoke.mjs tools/validate_game.py .github/workflows/validate-game.yml
           if git diff --cached --quiet; then
-            echo "No migration changes"
+            echo "No final cleanup changes"
           else
-            git commit -m "Stage 0I: apply eligibility and VN behavior migration"
+            git commit -m "Stage 0I: finalize validation and clean data diff"
             git push origin HEAD:stage-0i-eligibility-and-runtime
           fi
