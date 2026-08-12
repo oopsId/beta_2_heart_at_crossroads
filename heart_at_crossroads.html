@@ -817,42 +817,194 @@
         const correctPassword = "umbertoeco";
         const tempPassword = "999000";
 
-        function playSound(sound) {
-            if (sound) {
-            const fileName = /\.(mp3|wav|ogg|m4a)$/i.test(sound) ? sound : `${sound}.mp3`;
-            const audio = new Audio(`assets/sounds/${fileName}`);
-            audio.play()
-            .catch(error => {
-            console.error(`Ошибка воспроизведения звука ${sound}:`, error);
-            showErrorMessage(stats.language === "ru" ? `Звук ${sound} не найден` : `Sound ${sound} not found`);
-            });
-             }
-         }
+        // Stage 0G: runtime lifecycle generation/cancellation.
+        // Every playthrough owns one generation. Menu invalidates it synchronously,
+        // so old timers, async callbacks, overlays and audio can never mutate a later/reset run.
+        let runtimeGeneration = 0;
+        let runtimeActive = false;
+        const runtimeTimeouts = new Set();
+        const runtimeIntervals = new Set();
+        const runtimeAudios = new Set();
 
-      function playMusic(music) {
-        if (music) {
-        if (window.currentMusic) {
-            window.currentMusic.pause();
-            window.currentMusic.currentTime = 0;
+        function isRuntimeGenerationCurrent(generation) {
+            return generation === runtimeGeneration;
         }
 
-        const fileName = /\.(mp3|wav|ogg|m4a)$/i.test(music) ? music : `${music}.mp3`;
-        window.currentMusic = new Audio(`assets/sounds/${fileName}`);
-        window.currentMusic.loop = true;
-        window.currentMusic.play()
-            .catch(error => {
+        function isRunCurrent(generation) {
+            return runtimeActive && generation === runtimeGeneration;
+        }
+
+        function runtimeSetTimeout(callback, delay, generation = runtimeGeneration) {
+            const timeoutId = window.setTimeout(() => {
+                runtimeTimeouts.delete(timeoutId);
+                if (!isRuntimeGenerationCurrent(generation)) return;
+                callback();
+            }, delay);
+            runtimeTimeouts.add(timeoutId);
+            return timeoutId;
+        }
+
+        function runtimeClearTimeout(timeoutId) {
+            if (timeoutId === null || timeoutId === undefined) return;
+            window.clearTimeout(timeoutId);
+            runtimeTimeouts.delete(timeoutId);
+        }
+
+        function runtimeSetInterval(callback, delay, generation = runtimeGeneration) {
+            const intervalId = window.setInterval(() => {
+                if (!isRuntimeGenerationCurrent(generation)) return;
+                callback();
+            }, delay);
+            runtimeIntervals.add(intervalId);
+            return intervalId;
+        }
+
+        function runtimeClearInterval(intervalId) {
+            if (intervalId === null || intervalId === undefined) return;
+            window.clearInterval(intervalId);
+            runtimeIntervals.delete(intervalId);
+        }
+
+        function registerRuntimeAudio(audio) {
+            if (!audio) return null;
+            runtimeAudios.add(audio);
+            const forget = () => runtimeAudios.delete(audio);
+            audio.addEventListener('ended', forget, { once: true });
+            audio.addEventListener('error', forget, { once: true });
+            return audio;
+        }
+
+        function createRuntimeAudio(src, options = {}) {
+            const audio = registerRuntimeAudio(new Audio(src));
+            audio.loop = options.loop === true;
+            return audio;
+        }
+
+        function stopRuntimeAudioInstance(audio) {
+            if (!audio) return;
+            try {
+                audio.pause();
+                audio.currentTime = 0;
+            } catch (error) {
+                console.warn('[runtime] Не удалось остановить audio:', error);
+            }
+            runtimeAudios.delete(audio);
+            if (window.currentMusic === audio) window.currentMusic = null;
+        }
+
+        function clearDialogueRuntimeHandlers() {
+            const dialogueBox = document.querySelector('.dialogue-box');
+            if (!dialogueBox) return;
+            if (dialogueBox.tapHandler) {
+                dialogueBox.removeEventListener('touchstart', dialogueBox.tapHandler, { passive: false });
+                dialogueBox.removeEventListener('click', dialogueBox.tapHandler);
+                dialogueBox.tapHandler = null;
+            }
+            if (dialogueBox.touchHandler) {
+                dialogueBox.removeEventListener('touchstart', dialogueBox.touchHandler, { passive: false });
+                dialogueBox.removeEventListener('click', dialogueBox.touchHandler);
+                dialogueBox.touchHandler = null;
+            }
+            dialogueBox.onclick = null;
+            dialogueBox.ontouchstart = null;
+            dialogueBox.style.pointerEvents = 'none';
+        }
+
+        function clearRuntimeDomArtifacts() {
+            clearDialogueRuntimeHandlers();
+            const dialogueElement = document.getElementById('dialogue-text');
+            if (dialogueElement?.typeTimer) {
+                runtimeClearTimeout(dialogueElement.typeTimer);
+                dialogueElement.typeTimer = null;
+            }
+            isTyping = false;
+
+            document.querySelectorAll(
+                '.phone-overlay, #timer-countdown, .choice-btn, .choice-feedback, .memory-notification, #loading-overlay, #loading-status, .epilogue-overlay'
+            ).forEach(element => element.remove());
+
+            [
+                document.getElementById('background'),
+                document.getElementById('character-left'),
+                document.getElementById('character-right'),
+                document.querySelector('.dialogue-box')
+            ].filter(Boolean).forEach(element => {
+                element.classList.remove('fade-out');
+                element.style.opacity = '';
+                element.style.transition = '';
+            });
+
+            try {
+                if ('vibrate' in navigator) navigator.vibrate(0);
+            } catch (_) {}
+        }
+
+        function cancelRuntimeTasks() {
+            for (const timeoutId of [...runtimeTimeouts]) window.clearTimeout(timeoutId);
+            runtimeTimeouts.clear();
+            for (const intervalId of [...runtimeIntervals]) window.clearInterval(intervalId);
+            runtimeIntervals.clear();
+            for (const audio of [...runtimeAudios]) stopRuntimeAudioInstance(audio);
+            runtimeAudios.clear();
+            if (window.currentMusic) stopRuntimeAudioInstance(window.currentMusic);
+            if (window.gsap?.globalTimeline) window.gsap.globalTimeline.clear();
+            clearRuntimeDomArtifacts();
+        }
+
+        function beginRuntimeSession(reason = 'start') {
+            runtimeGeneration += 1;
+            runtimeActive = true;
+            cancelRuntimeTasks();
+            transitionInFlight = false;
+            choiceCommitInFlight = false;
+            console.log(`[runtime] generation ${runtimeGeneration} started: ${reason}`);
+            return runtimeGeneration;
+        }
+
+        function invalidateRuntimeSession(reason = 'invalidate') {
+            runtimeGeneration += 1;
+            runtimeActive = false;
+            cancelRuntimeTasks();
+            transitionInFlight = false;
+            choiceCommitInFlight = false;
+            console.log(`[runtime] generation ${runtimeGeneration} invalidated: ${reason}`);
+            return runtimeGeneration;
+        }
+
+        function playSound(sound, generation = runtimeGeneration) {
+            if (!sound) return null;
+            const fileName = /\.(mp3|wav|ogg|m4a)$/i.test(sound) ? sound : `${sound}.mp3`;
+            const audio = createRuntimeAudio(`assets/sounds/${fileName}`);
+            audio.play().catch(error => {
+                if (!isRuntimeGenerationCurrent(generation)) return;
+                console.error(`Ошибка воспроизведения звука ${sound}:`, error);
+                showErrorMessage(stats.language === "ru" ? `Звук ${sound} не найден` : `Sound ${sound} not found`);
+            });
+            return audio;
+        }
+
+        function playMusic(music, generation = runtimeGeneration) {
+            if (!music) return null;
+            if (window.currentMusic) stopRuntimeAudioInstance(window.currentMusic);
+
+            const fileName = /\.(mp3|wav|ogg|m4a)$/i.test(music) ? music : `${music}.mp3`;
+            const audio = createRuntimeAudio(`assets/sounds/${fileName}`, { loop: true });
+            window.currentMusic = audio;
+            audio.play().catch(error => {
+                if (!isRuntimeGenerationCurrent(generation)) return;
                 console.error(`Ошибка воспроизведения музыки ${music}:`, error);
                 showErrorMessage(stats.language === "ru" ? `Музыка ${music} не найдена` : `Sound ${music} not found`);
             });
-       }
-    }
+            return audio;
+        }
 
         function showErrorMessage(message) {
+            const generation = runtimeGeneration;
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
             errorDiv.textContent = message;
             document.body.appendChild(errorDiv);
-            setTimeout(() => errorDiv.remove(), 3000);
+            runtimeSetTimeout(() => errorDiv.remove(), 3000, generation);
         }
 
         // Browser-only persistence. Keys are namespaced because all oopsid.github.io projects share one origin.
@@ -1028,8 +1180,14 @@
                 e.preventDefault();
                 console.log('handleContinueGame вызван');
                 checkTempPassword(async () => {
-                    const loaded = await loadSession();
-                    if (loaded) startGame();
+                    const generation = beginRuntimeSession('continue');
+                    const loaded = await loadSession(generation);
+                    if (!isRunCurrent(generation)) return;
+                    if (loaded) {
+                        await startGame(generation);
+                    } else {
+                        invalidateRuntimeSession('continue-without-run');
+                    }
                 });
             }
 
@@ -1063,6 +1221,10 @@
             async function handleMenu(e) {
                 e.preventDefault();
                 console.log('handleMenu вызван: текущее прохождение уничтожается');
+
+                // Invalidate synchronously, before the first await. Nothing from the abandoned
+                // generation is allowed to mutate state while profile/run deletion is pending.
+                invalidateRuntimeSession('menu');
                 stats.hasReturnedViaMenu = true;
                 try {
                     await saveProfile();
@@ -1161,6 +1323,7 @@
             currentScene = 0;
             choices = [];
             stats = createFreshRunStats(hasReturnedViaMenu);
+            scriptData = null;
             currentBackground = null;
         }
 
@@ -1202,15 +1365,20 @@
 
         async function startNewGame() {
             console.log('startNewGame вызван');
+            const generation = beginRuntimeSession('new-game');
             resetGameState(false);
             await saveSession();
-            startGame();
+            if (!isRunCurrent(generation)) return false;
+            return await startGame(generation);
         }
 
-        async function loadSession() {
+        async function loadSession(generation = runtimeGeneration) {
             try {
+                if (!isRunCurrent(generation)) return false;
                 await loadProfile();
+                if (!isRunCurrent(generation)) return false;
                 const rawSession = await getFromStorage(RUN_STORAGE_KEY);
+                if (!isRunCurrent(generation)) return false;
                 if (!rawSession) {
                     showErrorMessage(stats.language === "ru" ? 'Нет сохранённого прохождения' : 'No saved playthrough');
                     return false;
@@ -1242,7 +1410,8 @@
             }
         }
 
-               function showMessengerOverlay(sceneId) {
+               function showMessengerOverlay(sceneId, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return null;
     console.log(`Создание оверлея для сцены ${sceneId}`);
     const existingOverlay = document.getElementById('messenger-overlay');
     if (existingOverlay) existingOverlay.remove();
@@ -1357,18 +1526,20 @@
             duration: 0,
             delay: 0.6,
             onStart: function () {
+                if (!isRunCurrent(generation)) return;
                 let text = "...";
                 let index = 0;
-                let interval = setInterval(() => {
+                let interval = runtimeSetInterval(() => {
+                    if (!isRunCurrent(generation)) return;
                     const el = document.getElementById('reply-text');
                     if (!el) {
-                        clearInterval(interval);
+                        runtimeClearInterval(interval);
                         return;
                     }
                     el.textContent = text.slice(0, index);
                     index++;
-                    if (index > text.length) clearInterval(interval);
-                }, 100);
+                    if (index > text.length) runtimeClearInterval(interval);
+                }, 100, generation);
             }
         });
     }
@@ -1500,9 +1671,10 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
 }
 
 
-        async function startGame() {
+        async function startGame(generation = runtimeGeneration) {
+            if (!isRunCurrent(generation)) return false;
             try {
-                console.log('startGame вызван');
+                console.log(`startGame вызван для generation ${generation}`);
                 showDebugMessage('Инициализация игры...');
                 document.getElementById('game-container').style.display = 'block';
                 document.getElementById('start-screen').style.display = 'none';
@@ -1514,11 +1686,14 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 loadingOverlay.innerHTML = '<span>Загрузка...</span>';
                 document.body.appendChild(loadingOverlay);
 
-                await preloadAssets(currentChapter);
-                const chapterLoaded = await loadChapter(currentChapter);
+                await preloadAssets(currentChapter, { generation });
+                if (!isRunCurrent(generation)) return false;
+
+                const chapterLoaded = await loadChapter(currentChapter, generation);
+                if (!isRunCurrent(generation)) return false;
                 if (!chapterLoaded) {
                     loadingOverlay.remove();
-                    return;
+                    return false;
                 }
 
                 document.getElementById('background').style.display = 'block';
@@ -1527,18 +1702,20 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 document.getElementById('dialogue-box').style.display = 'block';
                 document.getElementById('menu').style.display = 'flex';
                 document.getElementById('progress-bar').style.display = 'block';
-
                 document.getElementById('stats').style.display = stats.isAuthorized ? 'block' : 'none';
                 updateDiamondsDisplay();
 
                 loadingOverlay.remove();
-                showScene(currentScene);
+                return await showScene(currentScene, generation);
             } catch (error) {
+                if (!isRunCurrent(generation)) return false;
                 console.error('Ошибка в startGame:', error);
                 showDebugMessage(`Ошибка: ${error.message}`);
                 alert(stats.language === "ru" ? 'Ошибка запуска игры.' : 'Game start error.');
                 document.getElementById('loading-overlay')?.remove();
+                invalidateRuntimeSession('start-game-error');
                 showStartScreen();
+                return false;
             }
         }
 
@@ -1547,6 +1724,7 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
         }
 
         function showDebugMessage(message) {
+            const generation = runtimeGeneration;
             let debugDiv = document.getElementById('debug-message');
             if (!debugDiv) {
                 debugDiv = document.createElement('div');
@@ -1554,7 +1732,7 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 document.body.appendChild(debugDiv);
             }
             debugDiv.textContent = message;
-            setTimeout(() => debugDiv.remove(), 5000);
+            runtimeSetTimeout(() => debugDiv.remove(), 5000, generation);
         }
 
         function checkAssetExists(url) {
@@ -1565,6 +1743,8 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
         
 
         async function preloadAssets(chapterId, options = {}) {
+            const generation = options.generation ?? runtimeGeneration;
+            if (!isRunCurrent(generation)) return { success: 0, failed: 0, failedImages: [], cancelled: true };
             console.log(`Начало загрузки ресурсов для главы: ${chapterId}`);
             const language = options.language || 'ru';
             const texts = {
@@ -1656,15 +1836,17 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 loadingStatus.textContent = `${texts.loading}: ${loaded}/${totalImages} (${percentage}%)`;
             };
             const showErrorMessage = (message) => {
+                if (!isRunCurrent(generation)) return;
                 const errorElement = document.createElement('div');
                 errorElement.style.cssText = 'position: fixed; top: 10px; right: 10px; background: rgba(255,0,0,0.7); color: white; padding: 10px; z-index: 9999; border-radius: 5px;';
                 errorElement.textContent = message;
                 document.body.appendChild(errorElement);
-                setTimeout(() => {
+                runtimeSetTimeout(() => {
+                    if (!isRunCurrent(generation)) return;
                     errorElement.style.opacity = '0';
                     errorElement.style.transition = 'opacity 0.5s';
-                    setTimeout(() => errorElement.remove(), 500);
-                }, 3000);
+                    runtimeSetTimeout(() => errorElement.remove(), 500, generation);
+                }, 3000, generation);
             };
             updateStatus();
             try {
@@ -1672,12 +1854,20 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                     return new Promise((resolve) => {
                         const img = new Image();
                         img.onload = () => {
+                            if (!isRunCurrent(generation)) {
+                                resolve(false);
+                                return;
+                            }
                             loaded++;
                             updateStatus();
                             console.log(`✅ ${texts.loading}: ${src}`);
                             resolve(true);
                         };
                         img.onerror = () => {
+                            if (!isRunCurrent(generation)) {
+                                resolve(false);
+                                return;
+                            }
                             loaded++;
                             failedImages.push(src.split('/').pop());
                             updateStatus();
@@ -1707,13 +1897,18 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 console.error('Ошибка при загрузке изображений:', error);
                 throw error;
             } finally {
-                loadingStatus.style.opacity = '0';
-                loadingStatus.style.transition = 'opacity 0.5s';
-                setTimeout(() => loadingStatus.remove(), 500);
+                if (isRunCurrent(generation) && loadingStatus.isConnected) {
+                    loadingStatus.style.opacity = '0';
+                    loadingStatus.style.transition = 'opacity 0.5s';
+                    runtimeSetTimeout(() => loadingStatus.remove(), 500, generation);
+                } else {
+                    loadingStatus.remove();
+                }
             }
         }
 
-        async function loadChapter(chapterId) {
+        async function loadChapter(chapterId, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return false;
     console.log(`Загрузка главы ${chapterId}`);
     const jsonPath = `assets/data/chapter${chapterId}.json`;
     try {
@@ -1723,6 +1918,7 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 'Accept': 'application/json'
             }
         });
+        if (!isRunCurrent(generation)) return false;
         if (!response.ok) {
             console.error(`Ошибка загрузки ${jsonPath}: ${response.status} ${response.statusText}`);
             showErrorMessage(stats.language === "ru" ? `Глава ${chapterId} не найдена` : `Chapter ${chapterId} not found`);
@@ -1730,14 +1926,17 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
             return false;
         }
         const text = await response.text();
+        if (!isRunCurrent(generation)) return false;
         const data = JSON.parse(text);
         if (!data || !data.scenes || !Array.isArray(data.scenes)) {
             throw new Error('Некорректный формат JSON');
         }
+        if (!isRunCurrent(generation)) return false;
         scriptData = data;
         console.log(`Глава ${chapterId} загружена:`, scriptData);
         return true;
     } catch (error) {
+        if (!isRunCurrent(generation)) return false;
         console.error(`Ошибка загрузки главы ${chapterId}:`, error);
         showErrorMessage(stats.language === "ru" ? `Ошибка загрузки главы ${chapterId}` : `Error loading chapter ${chapterId}`);
         showStartScreen();
@@ -1759,6 +1958,8 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
         }
 
         async function saveChoice(choiceId, effects, memoryTag, options = {}) {
+        const generation = options.generation ?? runtimeGeneration;
+        if (!isRunCurrent(generation)) return false;
         choices.push(choiceId);
 
         if (effects) {
@@ -1784,12 +1985,14 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 ? "Вика запомнит ваш выбор"
                 : "Vika will remember your choice";
             document.getElementById('game-container').appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
+            runtimeSetTimeout(() => notification.remove(), 3000, generation);
         }
 
         if (options.persist !== false) {
             await saveSession();
+            if (!isRunCurrent(generation)) return false;
         }
+        return true;
     }
 
     // Stage 0D: one transition engine for scene, chapter and ending routes.
@@ -1879,6 +2082,8 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
     let choiceCommitInFlight = false;
 
     async function transitionTo(target, options = {}) {
+        const generation = options.generation ?? runtimeGeneration;
+        if (!isRunCurrent(generation)) return false;
         if (!target || target.type === 'none') {
             console.warn('[transitionTo] Нет маршрута перехода:', target);
             return false;
@@ -1894,42 +2099,47 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
 
         try {
             if (options.overlay) options.overlay.remove();
+            if (!isRunCurrent(generation)) return false;
 
             if (target.type === 'scene') {
                 currentScene = target.sceneId;
                 await saveSession();
-                await showScene(currentScene);
-                return true;
+                if (!isRunCurrent(generation)) return false;
+                return await showScene(currentScene, generation);
             }
 
             if (target.type === 'chapter') {
                 currentChapter = target.chapterId ?? (currentChapter + 1);
                 currentScene = 0;
-                const loaded = await loadChapter(currentChapter);
+                const loaded = await loadChapter(currentChapter, generation);
+                if (!isRunCurrent(generation)) return false;
                 if (!loaded) {
                     currentChapter = previousChapter;
                     currentScene = previousScene;
                     return false;
                 }
                 await saveSession();
-                await showScene(currentScene);
-                return true;
+                if (!isRunCurrent(generation)) return false;
+                return await showScene(currentScene, generation);
             }
 
             if (target.type === 'ending') {
                 const endingId = resolveEndingId(target.endingId);
                 await saveSession();
-                return await loadFinals(endingId);
+                if (!isRunCurrent(generation)) return false;
+                return await loadFinals(endingId, generation);
             }
 
             console.error('[transitionTo] Неизвестный тип перехода:', target);
             return false;
         } finally {
-            transitionInFlight = false;
+            if (isRuntimeGenerationCurrent(generation)) transitionInFlight = false;
         }
     }
 
     async function applyChoice(choice, options = {}) {
+        const generation = options.generation ?? runtimeGeneration;
+        if (!isRunCurrent(generation)) return false;
         if (!choice || choiceCommitInFlight) return false;
         if (choice.condition && !checkCondition(choice.condition)) return false;
         if (choice.cost && stats.diamonds < choice.cost) return false;
@@ -1939,22 +2149,24 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
             if (choice.cost) stats.diamonds -= choice.cost;
             updateDiamondsDisplay();
 
-            await saveChoice(choice.id, choice.effects, choice.memoryTag, { persist: false });
-            if (choice.effects) showChoiceEffects(choice.effects);
+            const saved = await saveChoice(choice.id, choice.effects, choice.memoryTag, { persist: false, generation });
+            if (!saved || !isRunCurrent(generation)) return false;
+            if (choice.effects) showChoiceEffects(choice.effects, generation);
 
             if (typeof options.cleanup === 'function') options.cleanup();
             if (options.overlay) options.overlay.remove();
             document.querySelectorAll('.choice-btn').forEach(btn => btn.remove());
+            if (!isRunCurrent(generation)) return false;
 
             const target = resolveChoiceTransition(choice);
             if (target.type === 'none') {
                 await saveSession();
-                return true;
+                return isRunCurrent(generation);
             }
 
-            return await transitionTo(target);
+            return await transitionTo(target, { generation });
         } finally {
-            choiceCommitInFlight = false;
+            if (isRuntimeGenerationCurrent(generation)) choiceCommitInFlight = false;
         }
     }
 
@@ -1967,23 +2179,27 @@ function updateProgress(sceneId, totalScenes) {
 }
 
 // Настройка фона с проверкой
-async function setupBackground(newBackground, language) {
+async function setupBackground(newBackground, language, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return null;
     console.log(`[setupBackground] Устанавливаем фон: ${newBackground}`);
     const bgUrl = newBackground === 'none' ? 'none' : `assets/backgrounds/${newBackground}.png`;
     if (bgUrl !== 'none') {
         const exists = await checkAssetExists(bgUrl);
+        if (!isRunCurrent(generation)) return null;
         console.log(`[setupBackground] Проверка фона ${bgUrl}: ${exists ? 'найден' : 'не найден'}`);
         if (!exists) {
             console.warn(`Фон ${newBackground}.png не найден`);
             showErrorMessage(language === "ru" ? `Фон ${newBackground} не найден` : `Background ${newBackground} not found`);
         }
     }
+    if (!isRunCurrent(generation)) return null;
     document.getElementById('background').style.backgroundImage = bgUrl === 'none' ? 'none' : `url('${bgUrl}')`;
     return newBackground;
 }
 
 // Настройка персонажей
-async function setupCharacters(scene, language, stats) {
+async function setupCharacters(scene, language, runStats, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return false;
     console.log(`[setupCharacters] Настройка персонажей для сцены ${scene.id}`);
     const charLeft = document.getElementById('character-left');
     const charRight = document.getElementById('character-right');
@@ -1996,10 +2212,11 @@ async function setupCharacters(scene, language, stats) {
 
     if (scene.characterLeft) {
         const leftChar = scene.characterLeft.includes('${stats.appearance}')
-            ? scene.characterLeft.replace('${stats.appearance}', stats.appearance)
+            ? scene.characterLeft.replace('${stats.appearance}', runStats.appearance)
             : scene.characterLeft;
         const leftCharUrl = `assets/characters/${leftChar.split('_')[0]}/${leftChar}.png`;
         const exists = await checkAssetExists(leftCharUrl);
+        if (!isRunCurrent(generation)) return false;
         console.log(`[setupCharacters] Проверка персонажа ${leftCharUrl}: ${exists ? 'найден' : 'не найден'}`);
         if (!exists) {
             console.warn(`Персонаж ${leftChar}.png не найден`);
@@ -2011,10 +2228,11 @@ async function setupCharacters(scene, language, stats) {
 
     if (scene.characterRight) {
         const rightChar = scene.characterRight.includes('${stats.appearance}')
-            ? scene.characterRight.replace('${stats.appearance}', stats.appearance)
+            ? scene.characterRight.replace('${stats.appearance}', runStats.appearance)
             : scene.characterRight;
         const rightCharUrl = `assets/characters/${rightChar.split('_')[0]}/${rightChar}.png`;
         const exists = await checkAssetExists(rightCharUrl);
+        if (!isRunCurrent(generation)) return false;
         console.log(`[setupCharacters] Проверка персонажа ${rightCharUrl}: ${exists ? 'найден' : 'не найден'}`);
         if (!exists) {
             console.warn(`Персонаж ${rightChar}.png не найден`);
@@ -2024,12 +2242,15 @@ async function setupCharacters(scene, language, stats) {
         charRight.classList.add(speakerName === "Вика" || speakerName === "Vika" ? 'character-speaker' : 'character-non-speaker');
     }
 
+    if (!isRunCurrent(generation)) return false;
     document.getElementById('speaker-name').textContent = speakerName;
     console.log(`[setupCharacters] Имя спикера: ${speakerName}`);
+    return true;
 }
 
 // Создание оверлея
-   function createOverlayIfNeeded(sceneId, displayText, hasTimer = false) {
+   function createOverlayIfNeeded(sceneId, displayText, hasTimer = false, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return null;
     console.log(`[createOverlayIfNeeded] Проверка сцены ${sceneId}, hasTimer: ${hasTimer}`);
     const sceneData = scriptData.scenes.find(s => s.id === sceneId) || {};
     
@@ -2040,7 +2261,7 @@ async function setupCharacters(scene, language, stats) {
         if (hasTimer) {
             console.log(`[createOverlayIfNeeded] Создаём showMessengerOverlay для сцены ${sceneId} (phone=1, hasTimer=true)`);
 			 
-            return showMessengerOverlay(sceneId);
+            return showMessengerOverlay(sceneId, generation);
         } else {
             console.log(`[createOverlayIfNeeded] Создаём createDefaultOverlay для сцены ${sceneId} (phone=1, hasTimer=false)`);
 			
@@ -2060,14 +2281,15 @@ function clearDialogueHandlers(dialogueBox) {
 }
 
   // Обработка выбора
-   function handleChoices(scene, dialogueBox, overlay) {
+   function handleChoices(scene, dialogueBox, overlay, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return;
     dialogueBox.style.pointerEvents = 'auto';
     if (!scene.choices || scene.choices.length === 0) return;
 
     console.log(`[handleChoices] Обработка выбора для сцены ${scene.id}`);
 
     if (getTimeoutConfig(scene)) {
-        showSceneWithTimer(scene);
+        showSceneWithTimer(scene, generation);
         return;
     }
 
@@ -2081,7 +2303,8 @@ function clearDialogueHandlers(dialogueBox) {
         } else {
             const handleChoice = async (e) => {
                 e.preventDefault();
-                await applyChoice(choice, { overlay });
+                if (!isRunCurrent(generation)) return;
+                await applyChoice(choice, { overlay, generation });
             };
             btn.addEventListener('touchstart', handleChoice, { passive: false });
             btn.addEventListener('click', handleChoice);
@@ -2091,7 +2314,8 @@ function clearDialogueHandlers(dialogueBox) {
     });
    }
 
-   function bindTransitionHandler(dialogueBox, target, overlay) {
+   function bindTransitionHandler(dialogueBox, target, overlay, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return;
     if (!dialogueBox || !target || target.type === 'none') {
         console.warn('[bindTransitionHandler] Нет доступного перехода:', target);
         return;
@@ -2104,11 +2328,12 @@ function clearDialogueHandlers(dialogueBox) {
 
     const handleNext = async (e) => {
         e.preventDefault();
+        if (!isRunCurrent(generation)) return;
         dialogueBox.style.pointerEvents = 'none';
         dialogueBox.removeEventListener('touchstart', handleNext, { passive: false });
         dialogueBox.removeEventListener('click', handleNext);
         dialogueBox.touchHandler = null;
-        await transitionTo(target, { overlay });
+        await transitionTo(target, { overlay, generation });
     };
 
     dialogueBox.touchHandler = handleNext;
@@ -2166,23 +2391,22 @@ function clearDialogueHandlers(dialogueBox) {
         }, options);
     }
 
-    async function showScene(sceneId) {
+    async function showScene(sceneId, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return false;
     console.log(`Показ сцены ${sceneId}`);
     const scene = scriptData?.scenes?.find(s => s.id === sceneId);
 
     if (!scene) {
+        if (!isRunCurrent(generation)) return false;
         console.error('Сцена не найдена:', sceneId);
         showErrorMessage(stats.language === "ru" ? `Сцена ${sceneId} не найдена` : `Scene ${sceneId} not found`);
         return false;
     }
 
     const hasTimedChoices = getTimeoutConfig(scene) !== null;
-    if (hasTimedChoices) {
-        return showSceneWithTimer(scene);
-    }
+    if (hasTimedChoices) return showSceneWithTimer(scene, generation);
 
     updateProgress(sceneId, scriptData.scenes.length);
-
     const dialogueBox = document.querySelector('.dialogue-box');
     const dialogueElement = document.getElementById('dialogue-text');
 
@@ -2196,69 +2420,68 @@ function clearDialogueHandlers(dialogueBox) {
     const shouldFade = currentBackground !== newBackground || lastScene?.id === sceneId;
 
     const applyScene = async () => {
-        currentBackground = await setupBackground(newBackground, stats.language);
-        await setupCharacters(scene, stats.language, stats);
+        if (!isRunCurrent(generation)) return false;
+        const background = await setupBackground(newBackground, stats.language, generation);
+        if (!isRunCurrent(generation) || background === null) return false;
+        currentBackground = background;
+        const charactersReady = await setupCharacters(scene, stats.language, stats, generation);
+        if (!isRunCurrent(generation) || !charactersReady) return false;
 
         clearDialogueHandlers(dialogueBox);
         dialogueBox.style.pointerEvents = 'none';
+        const overlay = createOverlayIfNeeded(sceneId, displayText, false, generation);
 
-        const overlay = createOverlayIfNeeded(sceneId, displayText, false);
-
-        if (scene.sound) playSound(scene.sound);
+        if (scene.sound) playSound(scene.sound, generation);
         if (scene.music) {
-            playMusic(scene.music);
+            playMusic(scene.music, generation);
         } else if (window.currentMusic) {
-            window.currentMusic.pause();
-            window.currentMusic.currentTime = 0;
-            window.currentMusic = null;
+            stopRuntimeAudioInstance(window.currentMusic);
         }
 
         typeText(displayText, dialogueElement, async () => {
+            if (!isRunCurrent(generation)) return;
             try {
                 dialogueBox.style.pointerEvents = 'auto';
-
                 if (scene.choices && scene.choices.length > 0) {
-                    handleChoices(scene, dialogueBox, overlay);
+                    handleChoices(scene, dialogueBox, overlay, generation);
                     return;
                 }
 
                 const target = resolveSceneTransition(scene);
                 console.log('[showScene] resolved transition:', target);
-
                 if (target.type === 'none') {
                     console.warn(`[showScene] Сцена ${scene.id} не имеет маршрута выхода`);
                     return;
                 }
 
-                // Preserve the legacy pacing of the numeric last scene: chapter advance
-                // happens immediately after its text finishes. Other terminal branches wait for tap.
                 if (target.type === 'chapter' && lastScene?.id === scene.id) {
-                    await transitionTo(target, { overlay });
+                    await transitionTo(target, { overlay, generation });
                     return;
                 }
 
-                bindTransitionHandler(dialogueBox, target, overlay);
+                bindTransitionHandler(dialogueBox, target, overlay, generation);
             } catch (err) {
-                console.error('[showScene callback] crash:', err);
+                if (isRunCurrent(generation)) console.error('[showScene callback] crash:', err);
             }
-        });
+        }, generation);
 
         return true;
     };
 
     if (shouldFade) {
         fadeOut(() => {
-            applyScene();
-            fadeIn();
-        });
+            if (!isRunCurrent(generation)) return;
+            void applyScene();
+            fadeIn(generation);
+        }, generation);
         return true;
     }
 
-    await applyScene();
-    return true;
+    return await applyScene();
 }
 
-    function showSceneWithTimer(scene) {
+    function showSceneWithTimer(scene, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return false;
     console.log(`[showSceneWithTimer] Показ сцены ${scene.id} с явным timeout outcome`);
 
     const timeoutConfig = getTimeoutConfig(scene);
@@ -2276,8 +2499,12 @@ function clearDialogueHandlers(dialogueBox) {
     const shouldFade = currentBackground !== newBackground || lastScene?.id === scene.id;
 
     const applyScene = async () => {
-        currentBackground = await setupBackground(newBackground, stats.language);
-        await setupCharacters(scene, stats.language, stats);
+        if (!isRunCurrent(generation)) return false;
+        const background = await setupBackground(newBackground, stats.language, generation);
+        if (!isRunCurrent(generation) || background === null) return false;
+        currentBackground = background;
+        const charactersReady = await setupCharacters(scene, stats.language, stats, generation);
+        if (!isRunCurrent(generation) || !charactersReady) return false;
 
         const charLeft = document.getElementById('character-left');
         const charRight = document.getElementById('character-right');
@@ -2286,13 +2513,13 @@ function clearDialogueHandlers(dialogueBox) {
 
         clearDialogueHandlers(dialogueBox);
         dialogueBox.style.pointerEvents = 'none';
+        const overlay = scene.phone === 1 ? showMessengerOverlay(scene.id, generation) : null;
 
-        const overlay = scene.phone === 1 ? showMessengerOverlay(scene.id) : null;
-
-        if (scene.sound) playSound(scene.sound);
-        if (scene.music) playMusic(scene.music);
+        if (scene.sound) playSound(scene.sound, generation);
+        if (scene.music) playMusic(scene.music, generation);
 
         typeText(displayText, dialogueElement, () => {
+            if (!isRunCurrent(generation)) return;
             dialogueBox.style.pointerEvents = 'auto';
 
             let timer = null;
@@ -2300,15 +2527,13 @@ function clearDialogueHandlers(dialogueBox) {
             let tickSound = null;
 
             const cleanupTimer = () => {
-                if (countdownInterval) clearInterval(countdownInterval);
-                if (timer) clearTimeout(timer);
+                runtimeClearInterval(countdownInterval);
+                runtimeClearTimeout(timer);
                 countdownInterval = null;
                 timer = null;
                 document.getElementById('timer-countdown')?.remove();
-                if (tickSound) {
-                    tickSound.pause();
-                    tickSound.currentTime = 0;
-                }
+                if (tickSound) stopRuntimeAudioInstance(tickSound);
+                tickSound = null;
             };
 
             scene.choices.forEach(choice => {
@@ -2320,7 +2545,8 @@ function clearDialogueHandlers(dialogueBox) {
                 } else {
                     const handleChoice = async (e) => {
                         e.preventDefault();
-                        await applyChoice(choice, { overlay, cleanup: cleanupTimer });
+                        if (!isRunCurrent(generation)) return;
+                        await applyChoice(choice, { overlay, cleanup: cleanupTimer, generation });
                     };
                     btn.addEventListener('touchstart', handleChoice, { passive: false });
                     btn.addEventListener('click', handleChoice);
@@ -2330,49 +2556,55 @@ function clearDialogueHandlers(dialogueBox) {
 
             const timerDuration = timeoutConfig.seconds * 1000;
             let timeLeft = Math.ceil(timeoutConfig.seconds);
-
             const countdownElement = document.createElement('div');
             countdownElement.id = 'timer-countdown';
             countdownElement.textContent = timeLeft;
             document.getElementById('game-container').appendChild(countdownElement);
 
-            tickSound = new Audio('assets/sounds/sfx_tick.mp3');
-            tickSound.loop = false;
-            tickSound.play().catch(err => console.warn('Ошибка воспроизведения sfx_tick:', err));
+            tickSound = createRuntimeAudio('assets/sounds/sfx_tick.mp3');
+            tickSound.play().catch(err => {
+                if (isRunCurrent(generation)) console.warn('Ошибка воспроизведения sfx_tick:', err);
+            });
 
-            countdownInterval = setInterval(() => {
+            countdownInterval = runtimeSetInterval(() => {
+                if (!isRunCurrent(generation)) return;
                 timeLeft = Math.max(0, timeLeft - 1);
                 countdownElement.textContent = timeLeft;
                 if (overlay) {
                     overlay.classList.add('flash-svg');
-                    setTimeout(() => overlay?.classList.remove('flash-svg'), 500);
+                    runtimeSetTimeout(() => {
+                        if (isRunCurrent(generation)) overlay?.classList.remove('flash-svg');
+                    }, 500, generation);
                 }
                 if ('vibrate' in navigator) navigator.vibrate(200);
                 if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
+                    runtimeClearInterval(countdownInterval);
                     countdownInterval = null;
-                    tickSound?.pause();
+                    if (tickSound) stopRuntimeAudioInstance(tickSound);
+                    tickSound = null;
                 }
-            }, 1000);
+            }, 1000, generation);
 
-            timer = setTimeout(async () => {
+            timer = runtimeSetTimeout(async () => {
+                if (!isRunCurrent(generation)) return;
                 console.log(`[showSceneWithTimer] Таймер сцены ${scene.id} истёк`);
-                await applyTimeoutOutcome(scene, timeoutConfig, { overlay, cleanup: cleanupTimer });
-            }, timerDuration);
-        });
+                await applyTimeoutOutcome(scene, timeoutConfig, { overlay, cleanup: cleanupTimer, generation });
+            }, timerDuration, generation);
+        }, generation);
 
         return true;
     };
 
     if (shouldFade) {
         fadeOut(() => {
-            applyScene();
-            fadeIn();
-        });
+            if (!isRunCurrent(generation)) return;
+            void applyScene();
+            fadeIn(generation);
+        }, generation);
         return true;
     }
 
-    applyScene();
+    void applyScene();
     return true;
 }
 
@@ -2841,16 +3073,17 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             document.body.appendChild(galleryDiv);
         }
 
-        async function loadFinals(endingId) {
+        async function loadFinals(endingId, generation = runtimeGeneration) {
+            if (!isRunCurrent(generation)) return false;
             const normalizedEndingId = resolveEndingId(endingId);
 
             try {
                 const response = await fetch('assets/data/finals.json');
-                if (!response.ok) {
-                    throw new Error(`Finals HTTP ${response.status}`);
-                }
+                if (!isRunCurrent(generation)) return false;
+                if (!response.ok) throw new Error(`Finals HTTP ${response.status}`);
 
                 const finalsData = await response.json();
+                if (!isRunCurrent(generation)) return false;
                 const ending = Array.isArray(finalsData?.endings)
                     ? finalsData.endings.find(candidate => candidate.id === normalizedEndingId)
                     : null;
@@ -2865,9 +3098,10 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
                     return false;
                 }
 
-                showEnding(ending);
+                showEnding(ending, generation);
                 return true;
             } catch (error) {
+                if (!isRunCurrent(generation)) return false;
                 console.error('[loadFinals] Не удалось загрузить финал:', error);
                 showErrorMessage(
                     stats.language === "ru"
@@ -2878,7 +3112,8 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             }
         }
 
-        function showEnding(ending) {
+        function showEnding(ending, generation = runtimeGeneration) {
+            if (!isRunCurrent(generation)) return false;
             const scene = ending.scenes[0];
             const backgroundElement = document.getElementById('background');
             const charLeft = document.getElementById('character-left');
@@ -2888,6 +3123,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
 
             const bgUrl = `assets/backgrounds/${scene.background}.png`;
             checkAssetExists(bgUrl).then(exists => {
+                if (!isRunCurrent(generation)) return;
                 if (!exists) {
                     console.warn(`Фон ${scene.background}.png не найден`);
                     showErrorMessage(stats.language === "ru" ? `Фон ${scene.background} не найден` : `Background ${scene.background} not found`);
@@ -2898,6 +3134,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             if (scene.characterLeft) {
                 const leftCharUrl = `assets/characters/${scene.characterLeft.split('_')[0]}/${scene.characterLeft}.png`;
                 checkAssetExists(leftCharUrl).then(exists => {
+                    if (!isRunCurrent(generation)) return;
                     if (!exists) {
                         console.warn(`Персонаж ${scene.characterLeft}.png не найден`);
                         showErrorMessage(stats.language === "ru" ? `Персонаж ${scene.characterLeft} не найден` : `Character ${scene.characterLeft} not found`);
@@ -2909,6 +3146,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             if (scene.characterRight) {
                 const rightCharUrl = `assets/characters/${scene.characterRight.split('_')[0]}/${scene.characterRight}.png`;
                 checkAssetExists(rightCharUrl).then(exists => {
+                    if (!isRunCurrent(generation)) return;
                     if (!exists) {
                         console.warn(`Персонаж ${scene.characterRight}.png не найден`);
                         showErrorMessage(stats.language === "ru" ? `Персонаж ${scene.characterRight} не найден` : `Character ${scene.characterRight} not found`);
@@ -2918,29 +3156,42 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             } else charRight.style.backgroundImage = 'none';
 
             speakerName.textContent = scene.speaker[stats.language];
-            typeText(stats.completionCount >= 1 && scene.second_playthrough_text ? 
-                scene.second_playthrough_text[stats.language] : scene.text[stats.language], 
-                dialogueElement, () => {
-                    showEpilogue(ending.epilogue[stats.language]);
-                });
+            typeText(
+                stats.completionCount >= 1 && scene.second_playthrough_text
+                    ? scene.second_playthrough_text[stats.language]
+                    : scene.text[stats.language],
+                dialogueElement,
+                () => {
+                    if (isRunCurrent(generation)) showEpilogue(ending.epilogue[stats.language], generation);
+                },
+                generation
+            );
 
-            if (scene.sound) playSound(scene.sound);
-            if (scene.music) playMusic(scene.music);
+            if (scene.sound) playSound(scene.sound, generation);
+            if (scene.music) playMusic(scene.music, generation);
+            return true;
         }
 
-        function showEpilogue(epilogueText) {
+        function showEpilogue(epilogueText, generation = runtimeGeneration) {
+            if (!isRunCurrent(generation)) return false;
             const epilogueDiv = document.createElement('div');
+            epilogueDiv.className = 'epilogue-overlay';
             epilogueDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); color: white; display: flex; justify-content: center; align-items: center; text-align: center; padding: 20px; z-index: 10;';
             epilogueDiv.textContent = epilogueText;
             document.body.appendChild(epilogueDiv);
-            setTimeout(async () => {
+            runtimeSetTimeout(async () => {
+                if (!isRunCurrent(generation)) return;
                 epilogueDiv.remove();
                 stats.completionCount++;
                 await saveProfile();
+                if (!isRunCurrent(generation)) return;
                 await deleteRun();
+                if (!isRunCurrent(generation)) return;
+                invalidateRuntimeSession('ending-complete');
                 resetGameState(false);
                 showStartScreen();
-            }, 5000);
+            }, 5000, generation);
+            return true;
         }
 
 
@@ -2962,115 +3213,86 @@ function checkCondition(condition) {
     }
 }
 
- function typeText(text, element, callback) {
+ function typeText(text, element, callback, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return false;
     if (isTyping) {
         console.log(`[${Date.now()}] typeText уже идёт, пропускаем`);
-        return;
+        return false;
     }
+
     const callId = Date.now();
-    console.log(`[${callId}] Начинаем печатать текст: "${text}"`);
     isTyping = true;
-    console.log(`[${callId}] isTyping установлен в true`);
     element.textContent = '';
-    if (element.typeTimer) {
-        console.log(`[${callId}] Очищаем старый таймер`);
-        clearTimeout(element.typeTimer);
-    }
+    if (element.typeTimer) runtimeClearTimeout(element.typeTimer);
+
     const parts = text.split('||').map(part => part.trim()).filter(part => part.length > 0);
-    console.log(`[${callId}] Частей текста: ${parts.length}, parts: ${JSON.stringify(parts)}`);
     let partIndex = 0;
     let i = 0;
     const speed = 50;
     const dialogueBox = document.querySelector('.dialogue-box');
-    if (!dialogueBox) console.error(`[${callId}] dialogueBox не найден!`);
 
     function clearHandlers() {
-        if (dialogueBox) {
-            if (dialogueBox.tapHandler) {
-                dialogueBox.removeEventListener('touchstart', dialogueBox.tapHandler, { passive: false });
-                dialogueBox.removeEventListener('click', dialogueBox.tapHandler);
-                console.log(`[${callId}] Очистка обработчиков тапов (tapHandler)`);
-                dialogueBox.tapHandler = null;
-            }
-            if (dialogueBox.touchHandler) {
-                dialogueBox.removeEventListener('touchstart', dialogueBox.touchHandler, { passive: false });
-                dialogueBox.removeEventListener('click', dialogueBox.touchHandler);
-                console.log(`[${callId}] Очистка обработчиков тапов (touchHandler)`);
-                dialogueBox.touchHandler = null;
-            }
-        } else {
-            console.error(`[${callId}] dialogueBox не найден при очистке обработчиков`);
+        if (!dialogueBox) return;
+        if (dialogueBox.tapHandler) {
+            dialogueBox.removeEventListener('touchstart', dialogueBox.tapHandler, { passive: false });
+            dialogueBox.removeEventListener('click', dialogueBox.tapHandler);
+            dialogueBox.tapHandler = null;
+        }
+        if (dialogueBox.touchHandler) {
+            dialogueBox.removeEventListener('touchstart', dialogueBox.touchHandler, { passive: false });
+            dialogueBox.removeEventListener('click', dialogueBox.touchHandler);
+            dialogueBox.touchHandler = null;
         }
     }
-    clearHandlers();
+
+    function finish() {
+        if (!isRunCurrent(generation)) return;
+        isTyping = false;
+        element.typeTimer = null;
+        clearHandlers();
+        if (callback) callback();
+    }
 
     function type() {
-        console.log(`[${callId}] type(): partIndex=${partIndex}, i=${i}, parts.length=${parts.length}`);
+        if (!isRunCurrent(generation)) return;
         if (partIndex >= parts.length) {
-            isTyping = false;
-            console.log(`[${callId}] isTyping сброшен в false (все части готовы)`);
-            clearHandlers();
-            console.log(`[${callId}] Все части напечатаны, вызываем callback`);
-            if (callback) {
-                console.log(`[${callId}] Callback существует, запускаем`);
-                callback();
-            } else {
-                console.log(`[${callId}] Callback не передан`);
-            }
+            finish();
             return;
         }
         if (i < parts[partIndex].length) {
             element.textContent += parts[partIndex].charAt(i);
             i++;
-            console.log(`[${callId}] Печатаем символ ${i} части ${partIndex + 1}: "${parts[partIndex]}"`);
-            element.typeTimer = setTimeout(type, speed);
+            element.typeTimer = runtimeSetTimeout(type, speed, generation);
+            return;
+        }
+
+        isTyping = false;
+        element.typeTimer = null;
+        if (partIndex === parts.length - 1) {
+            finish();
         } else {
-            isTyping = false;
-            console.log(`[${callId}] isTyping сброшен в false (часть ${partIndex + 1} готова)`);
-            console.log(`[${callId}] Завершена часть ${partIndex + 1} из ${parts.length}`);
-            if (partIndex === parts.length - 1) {
-                console.log(`[${callId}] Последняя часть завершена, вызываем callback`);
-                clearHandlers();
-                if (callback) {
-                    console.log(`[${callId}] Callback существует, запускаем`);
-                    callback();
-                } else {
-                    console.log(`[${callId}] Callback не передан`);
-                }
-            } else {
-                // Переход к следующей части
-                console.log(`[${callId}] Переход к части ${partIndex + 2}`);
-                partIndex++;
-                i = 0;
-                element.textContent = '';
-                isTyping = true;
-                type();
-            }
+            partIndex++;
+            i = 0;
+            element.textContent = '';
+            isTyping = true;
+            type();
         }
     }
 
     function handleTap(e) {
         e.preventDefault();
         e.stopPropagation();
-        console.log(`[${callId}] Тап, isTyping: ${isTyping}, partIndex=${partIndex}`);
+        if (!isRunCurrent(generation)) return;
+
         if (isTyping) {
-            console.log(`[${callId}] Пропускаем анимацию части ${partIndex + 1}`);
-            clearTimeout(element.typeTimer);
+            runtimeClearTimeout(element.typeTimer);
+            element.typeTimer = null;
             element.textContent = parts[partIndex];
             i = parts[partIndex].length;
             isTyping = false;
-            console.log(`[${callId}] isTyping сброшен в false (анимация пропущена)`);
             if (partIndex === parts.length - 1) {
-                console.log(`[${callId}] Пропущена последняя часть, вызываем callback`);
-                clearHandlers();
-                if (callback) {
-                    console.log(`[${callId}] Запускаем callback после пропуска`);
-                    callback();
-                } else {
-                    console.log(`[${callId}] Callback не передан после пропуска`);
-                }
+                finish();
             } else {
-                console.log(`[${callId}] Переход к части ${partIndex + 2} после пропуска`);
                 partIndex++;
                 i = 0;
                 element.textContent = '';
@@ -3078,71 +3300,68 @@ function checkCondition(condition) {
                 type();
             }
         } else if (partIndex < parts.length - 1) {
-            console.log(`[${callId}] Переход к части ${partIndex + 2}`);
             partIndex++;
             i = 0;
             element.textContent = '';
             isTyping = true;
-            console.log(`[${callId}] isTyping установлен в true (следующая часть)`);
             type();
         } else {
-            console.log(`[${callId}] Все части показаны, вызываем callback`);
-            isTyping = false;
-            console.log(`[${callId}] isTyping сброшен в false (финальный тап)`);
-            clearHandlers();
-            if (callback) {
-                console.log(`[${callId}] Запускаем callback после финального тапа`);
-                callback();
-            } else {
-                console.log(`[${callId}] Callback не передан после финального тапа`);
-            }
+            finish();
         }
     }
 
+    clearHandlers();
     if (dialogueBox) {
         dialogueBox.tapHandler = handleTap;
         dialogueBox.addEventListener('touchstart', handleTap, { passive: false });
         dialogueBox.addEventListener('click', handleTap);
-        console.log(`[${callId}] Обработчик тапов установлен`);
-        dialogueBox.style.pointerEvents = 'auto'; // Убедимся, что элемент кликабелен
-    } else {
-        console.error(`[${callId}] Не удалось установить обработчик тапов: dialogueBox отсутствует`);
+        dialogueBox.style.pointerEvents = 'auto';
     }
 
     type();
+    return true;
 }
 
 
         
-function fadeOut(callback) {
+        
+function fadeOut(callback, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return false;
     const elements = [
         document.getElementById('background'),
         document.getElementById('character-left'),
         document.getElementById('character-right'),
         document.querySelector('.dialogue-box')
-    ];
+    ].filter(Boolean);
     elements.forEach(el => el.classList.add('fade-out'));
-    setTimeout(() => {
+    runtimeSetTimeout(() => {
+        if (!isRunCurrent(generation)) return;
         elements.forEach(el => el.classList.remove('fade-out'));
         if (callback) callback();
-    }, 1000);
+    }, 1000, generation);
+    return true;
 }
 
-function fadeIn() {
+function fadeIn(generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return false;
     const elements = [
         document.getElementById('background'),
         document.getElementById('character-left'),
         document.getElementById('character-right'),
         document.querySelector('.dialogue-box')
-    ];
+    ].filter(Boolean);
     elements.forEach(el => {
         el.style.opacity = '0';
         el.style.transition = 'opacity 1s ease';
-        setTimeout(() => el.style.opacity = '1', 10);
+        runtimeSetTimeout(() => {
+            if (isRunCurrent(generation)) el.style.opacity = '1';
+        }, 10, generation);
     });
+    return true;
 }
 
-function showChoiceEffects(effects) {
+function showChoiceEffects(effects, generation = runtimeGeneration) {
+    if (!isRunCurrent(generation)) return;
     const feedback = document.createElement('img');
     feedback.className = 'choice-feedback';
     if (effects.crown) feedback.src = 'assets/ui/crown.png';
@@ -3150,7 +3369,7 @@ function showChoiceEffects(effects) {
     else if (effects.leaf) feedback.src = 'assets/ui/leaf.png';
     else return;
     document.getElementById('game-container').appendChild(feedback);
-    setTimeout(() => feedback.remove(), 3000);
+    runtimeSetTimeout(() => feedback.remove(), 3000, generation);
 }
 
 </script>
