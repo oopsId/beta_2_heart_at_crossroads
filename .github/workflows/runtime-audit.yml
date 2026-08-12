@@ -19,6 +19,9 @@ jobs:
       - name: Static integrity audit
         run: python3 audit/runtime_audit.py
 
+      - name: Graph and state-model audit
+        run: python3 audit/graph_audit.py
+
       - name: Prepare isolated Pages-like server
         run: |
           mkdir -p /tmp/audit-site
