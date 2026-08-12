@@ -27,6 +27,7 @@ jobs:
         run: |
           mkdir -p artifacts
           python3 tools/validate_game.py --report artifacts/structural-validation.json
+          python3 tools/validate_eligibility.py | tee artifacts/eligibility-validation.json
 
       - name: Upload structural report
         if: always()
