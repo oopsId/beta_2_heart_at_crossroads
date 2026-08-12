@@ -212,7 +212,6 @@
                 "en": "We stepped out of the house, and my phone buzzed in my fur coat pocket. Lyosha on Telegram: 'Party tonight, Dima's coming. Be there!'. I froze, staring at the screen. What do I feel? Warmth from his words or just a habit of replying? Maybe that horoscope on 'VKontakte' was right about a choice?"
             },
             "phone": 1,
-            "timer": 10,
             "second_playthrough_text": {
                 "ru": "Мы вышли из дома, и телефон завибрировал в кармане шубки. Лёша в Telegram: 'Тусим вечером, Дима будет. Приходи, будет круто! Скучаю по тебе!'.|| Я замерла, глядя на экран. Что я чувствую теперь? Не дежавю — скорее усталость от повторения. Словно вселенная играет со мной, предлагая те же выборы.",
                 "en": "We stepped out of the house, and my phone buzzed in my fur coat pocket. Lyosha on Telegram: 'Party tonight, Dima's coming. Be there, it'll be awesome! Miss you!'. I froze, staring at the screen. What do I feel now? Not déjà vu — more like fatigue from repetition. As if the universe is playing with me, offering the same choices."
@@ -226,9 +225,11 @@
                         "ru": "[Ответить: 'Ок, буду!'] (10 сек)",
                         "en": "[Reply: 'Ok, I'll be there!'] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 8,
-                    "effects": { "crown": 1, "relationships.lyosha": 1 },
+                    "effects": {
+                        "crown": 1,
+                        "relationships.lyosha": 1
+                    },
                     "memoryTag": "lyosha_remembers_yes"
                 },
                 {
@@ -237,9 +238,11 @@
                         "ru": "[Ответить: 'Не сегодня'] (10 сек)",
                         "en": "[Reply: 'Not tonight'] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 9,
-                    "effects": { "heart": 1, "relationships.lyosha": -1 },
+                    "effects": {
+                        "heart": 1,
+                        "relationships.lyosha": -1
+                    },
                     "memoryTag": "lyosha_remembers_no"
                 },
                 {
@@ -250,7 +253,11 @@
                     },
                     "nextScene": 10
                 }
-            ]
+            ],
+            "timeout": {
+                "seconds": 10,
+                "choiceId": "ignore"
+            }
         },
         {
             "id": 8,
@@ -622,7 +629,6 @@
                 "en": "Evening draped the city in soft shadows, my fur coat warmed my shoulders, sneakers rustled through leaves. My phone buzzed — Mark on Telegram: 'You're beautiful when you're lost.' My heart tightened, fingers hovered over the screen.||What do I feel? Warmth? Or just words? The horoscope on 'VKontakte' mentioned a choice, and here it is — right in front of me."
             },
             "phone": 1,
-            "timer": null,
             "second_playthrough_text": {
                 "ru": "Вечер окутал город мягкими тенями, шубка грела плечи, кроссовки шуршали по листьям. Телефон завибрировал — Марк в Telegram: 'Ты красивая, когда теряешься.' Я знала, что он напишет это, и всё равно сердце сжалось. ||Что я чувствую? Тепло знакомых слов или тень старых ошибок? Гороскоп во 'ВКонтакте' опять оказался прав — выбор снова здесь.",
                 "en": "Evening draped the city in soft shadows, my fur coat warmed my shoulders, sneakers rustled through leaves. My phone buzzed — Mark on Telegram: 'You're beautiful when you're lost.' I knew he'd write this, yet my heart still tightened.|| What do I feel? The warmth of familiar words or the shadow of old mistakes? The horoscope on 'VKontakte' was right again — the choice is back."
@@ -636,9 +642,11 @@
                         "ru": "[Ответить: 'Спасибо, это мило'] (10 сек)",
                         "en": "[Reply: 'Thanks, that's sweet'] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 22,
-                    "effects": { "heart": 1, "memoryTag": "mark_remembers_thanks" }
+                    "effects": {
+                        "heart": 1,
+                        "memoryTag": "mark_remembers_thanks"
+                    }
                 },
                 {
                     "id": "ignore",
@@ -654,12 +662,18 @@
                         "ru": "[Ответить: 'Докажи, что это не просто слова'] (15 бриллиантов) (10 сек)",
                         "en": "[Reply: 'Prove it's not just words'] (15 diamonds) (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 24,
                     "cost": 15,
-                    "effects": { "heart": 1, "relationships.mark": 1 }
+                    "effects": {
+                        "heart": 1,
+                        "relationships.mark": 1
+                    }
                 }
-            ]
+            ],
+            "timeout": {
+                "seconds": 10,
+                "choiceId": "ignore"
+            }
         },
         {
             "id": 22,

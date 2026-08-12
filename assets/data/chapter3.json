@@ -52,7 +52,6 @@
                         "ru": "[Марку: ‘Всё ок, а ты?’] (10 сек)",
                         "en": "[To Mark: ‘I’m fine, you?’] (10 сек)"
                     },
-                    "timer": 10,
                     "nextScene": 2,
                     "effects": {
                         "heart": 1,
@@ -65,7 +64,6 @@
                         "ru": "[Сергею: ‘Скоро буду’] (10 сек)",
                         "en": "[To Sergey: ‘Be there soon’] (10 сек)"
                     },
-                    "timer": 10,
                     "nextScene": 3,
                     "effects": {
                         "crown": 1,
@@ -80,7 +78,11 @@
                     },
                     "nextScene": 4
                 }
-            ]
+            ],
+            "timeout": {
+                "seconds": 10,
+                "choiceId": "ignore"
+            }
         },
         {
             "id": 2,
@@ -313,7 +315,6 @@
                         "ru": "[Марку: ‘Всё ок, ты как?’] (10 сек)",
                         "en": "[To Mark: ‘I’m fine, you?’] (10 сек)"
                     },
-                    "timer": 10,
                     "nextScene": 11,
                     "effects": {
                         "heart": 1,
@@ -328,7 +329,11 @@
                     },
                     "nextScene": 12
                 }
-            ]
+            ],
+            "timeout": {
+                "seconds": 10,
+                "choiceId": "ignore"
+            }
         },
         {
             "id": 11,
