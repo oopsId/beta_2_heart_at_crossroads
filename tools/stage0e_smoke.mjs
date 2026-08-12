@@ -66,6 +66,7 @@ async function prepareTimedScene(chapter, sceneId, seconds) {
     setupCharacters = async () => {};
     playSound = () => {};
     playMusic = () => {};
+    showScene = async () => true;
     window.currentMusic = null;
     document.querySelectorAll('.choice-btn').forEach(btn => btn.remove());
     document.getElementById('timer-countdown')?.remove();
