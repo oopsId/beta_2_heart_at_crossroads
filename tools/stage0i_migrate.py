@@ -201,7 +201,11 @@ def migrate_html():
 
     tag = '<script src="assets/js/stage0i-runtime.js"></script>'
     if tag not in raw:
-        raw = replace_once(raw, '</body>', f'    {tag}{nl}</body>', 'Stage 0I script tag')
+        closing_script = raw.rfind('</script>')
+        if closing_script < 0:
+            raise RuntimeError('legacy HTML has no closing script tag')
+        insert_at = closing_script + len('</script>')
+        raw = raw[:insert_at] + nl + tag + raw[insert_at:]
 
     HTML.write_bytes(raw.encode('utf-8'))
 
