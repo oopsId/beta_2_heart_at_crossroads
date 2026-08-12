@@ -18,7 +18,7 @@ window.stage0jDecodeImage = function stage0jDecodeImage(url) {
         const decodeLoaded = async () => {
             try {
                 if (typeof img.decode === 'function') await img.decode();
-                finish(img.naturalWidth > 0 || img.complete);
+                finish(img.naturalWidth > 0);
             } catch (_error) {
                 finish(img.naturalWidth > 0);
             }
@@ -55,6 +55,7 @@ function stage0jInjectStyles() {
             min-height: 340px;
             z-index: 3;
             pointer-events: none;
+            transform: none;
             filter: drop-shadow(0 14px 24px rgba(0,0,0,.28));
         }
         #phone-compose-overlay .stage0j-phone-shell {
@@ -212,6 +213,34 @@ function stage0jInjectStyles() {
                 max-height: 45vh;
             }
             #phone-compose-overlay .stage0j-notification-copy span { max-width: 115px; }
+        }
+        /* Short landscape uses a side-by-side composition instead of stacking phone and dialogue. */
+        @media (max-height: 520px) and (orientation: landscape) {
+            #phone-compose-overlay {
+                left: 12px;
+                top: 8px;
+                transform: none;
+                width: min(190px, 29vw);
+                height: calc(100vh - 16px);
+                min-width: 0;
+                min-height: 0;
+                max-height: none;
+            }
+            body.stage0j-compose-scene .dialogue-box {
+                left: min(31vw, 210px);
+                right: 8px;
+                bottom: 8px;
+                width: auto;
+                min-height: 0;
+                max-height: calc(100vh - 16px);
+            }
+            #phone-compose-overlay .stage0j-phone-header { height: 46px; padding: 0 9px; }
+            #phone-compose-overlay .stage0j-header-avatar { width: 27px; height: 27px; }
+            #phone-compose-overlay .stage0j-notification-stack { top: 55px; left: 7px; right: 7px; gap: 5px; }
+            #phone-compose-overlay .stage0j-notification { min-height: 46px; padding: 5px 7px; grid-template-columns: 29px 1fr; gap: 6px; }
+            #phone-compose-overlay .stage0j-notification-avatar,
+            #phone-compose-overlay .stage0j-notification-initial { width: 29px; height: 29px; }
+            #phone-compose-overlay .stage0j-compose-input-wrap { left: 7px; right: 7px; bottom: 7px; min-height: 34px; }
         }
     `;
     document.head.appendChild(style);

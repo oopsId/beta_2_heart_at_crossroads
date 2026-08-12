@@ -333,6 +333,59 @@ assert(!result.text.includes('Пальцы замерли') && !result.text.incl
 assert(!result.dialogue.includes('Катя в WhatsApp'), 'Scene narration still contains stale Katya branch that is not selectable', JSON.stringify(result));
 results.phoneOverlay = true;
 
+// 8b. Compose phone stays on-screen on desktop and never overlaps dialogue in short landscape.
+await page.setViewportSize({ width: 1920, height: 1080 });
+result = await page.evaluate(async () => {
+  const generation = beginRuntimeSession('0j-phone-desktop-layout');
+  resetGameState(false);
+  currentChapter = 2;
+  scriptData = await (await fetch('assets/data/chapter2.json')).json();
+  const scene = scriptData.scenes.find(candidate => candidate.id === 1);
+  document.getElementById('game-container').style.display = 'block';
+  const overlay = stage0jShowComposeOverlay(scene, generation);
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const rect = overlay.getBoundingClientRect();
+  const snapshot = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: innerWidth, height: innerHeight };
+  overlay.remove();
+  invalidateRuntimeSession('0j-phone-desktop-layout-done');
+  return snapshot;
+});
+assert(result.left >= 0 && result.top >= 0 && result.right <= result.width && result.bottom <= result.height, 'Compose phone is clipped off desktop viewport', JSON.stringify(result));
+
+await page.setViewportSize({ width: 667, height: 375 });
+result = await page.evaluate(async () => {
+  const generation = beginRuntimeSession('0j-phone-landscape-layout');
+  resetGameState(false);
+  currentChapter = 2;
+  scriptData = await (await fetch('assets/data/chapter2.json')).json();
+  const scene = scriptData.scenes.find(candidate => candidate.id === 1);
+  const game = document.getElementById('game-container');
+  const dialogue = document.querySelector('.dialogue-box');
+  game.style.display = 'block';
+  dialogue.style.display = 'flex';
+  document.body.classList.add('stage0j-compose-scene');
+  const overlay = stage0jShowComposeOverlay(scene, generation);
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const phoneRect = overlay.getBoundingClientRect();
+  const dialogueRect = dialogue.getBoundingClientRect();
+  const overlaps = !(phoneRect.right <= dialogueRect.left || phoneRect.left >= dialogueRect.right || phoneRect.bottom <= dialogueRect.top || phoneRect.top >= dialogueRect.bottom);
+  const snapshot = {
+    phone: { left: phoneRect.left, top: phoneRect.top, right: phoneRect.right, bottom: phoneRect.bottom },
+    dialogue: { left: dialogueRect.left, top: dialogueRect.top, right: dialogueRect.right, bottom: dialogueRect.bottom },
+    width: innerWidth,
+    height: innerHeight,
+    overlaps
+  };
+  overlay.remove();
+  document.body.classList.remove('stage0j-compose-scene');
+  invalidateRuntimeSession('0j-phone-landscape-layout-done');
+  return snapshot;
+});
+assert(result.phone.left >= 0 && result.phone.top >= 0 && result.phone.right <= result.width && result.phone.bottom <= result.height, 'Compose phone is clipped in short landscape', JSON.stringify(result));
+assert(result.overlaps === false, 'Compose phone overlaps dialogue in short landscape', JSON.stringify(result));
+results.phoneLayout = true;
+await page.setViewportSize({ width: 1280, height: 720 });
+
 // 9. Speaker focus follows the actual displayed character instead of hard-coded Anna/Vika positions.
 result = await page.evaluate(async () => {
   const generation = beginRuntimeSession('0i-speaker');
