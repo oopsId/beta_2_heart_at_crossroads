@@ -797,7 +797,7 @@
                 heart: 0,
                 leaf: 0,
                 diamonds: 10,
-                relationships: { mark: 0, lera: 0, vika: 0, sergey: 0, anna: 0, dima: 0, lesha: 0 },
+                relationships: { mark: 0, lera: 0, vika: 0, sergey: 0, anna: 0, dima: 0, lyosha: 0 },
                 appearance: "style1",
                 hasReturnedViaMenu,
                 language: profileState.language,
@@ -1240,8 +1240,8 @@
                 e.preventDefault();
                 console.log('handleShowStats вызван');
                 const statsText = stats.language === "ru" ?
-                    `Короны: ${stats.crown}\nСердце: ${stats.heart}\nЛист: ${stats.leaf}\nБриллианты: ${stats.diamonds}\nОтношения:\nМарк: ${stats.relationships.mark}\nЛера: ${stats.relationships.lera}\nВика: ${stats.relationships.vika}\nСергей: ${stats.relationships.sergey}\nАнна: ${stats.relationships.anna}\nДима: ${stats.relationships.dima}\nЛёша: ${stats.relationships.lesha}` :
-                    `Crowns: ${stats.crown}\nHeart: ${stats.heart}\nLeaf: ${stats.leaf}\nDiamonds: ${stats.diamonds}\nRelationships:\nMark: ${stats.relationships.mark}\nLera: ${stats.relationships.lera}\nVika: ${stats.relationships.vika}\nSergey: ${stats.relationships.sergey}\nAnna: ${stats.relationships.anna}\nDima: ${stats.relationships.dima}\nLesha: ${stats.relationships.lesha}`;
+                    `Короны: ${stats.crown}\nСердце: ${stats.heart}\nЛист: ${stats.leaf}\nБриллианты: ${stats.diamonds}\nОтношения:\nМарк: ${stats.relationships.mark}\nЛера: ${stats.relationships.lera}\nВика: ${stats.relationships.vika}\nСергей: ${stats.relationships.sergey}\nАнна: ${stats.relationships.anna}\nДима: ${stats.relationships.dima}\nЛёша: ${stats.relationships.lyosha}` :
+                    `Crowns: ${stats.crown}\nHeart: ${stats.heart}\nLeaf: ${stats.leaf}\nDiamonds: ${stats.diamonds}\nRelationships:\nMark: ${stats.relationships.mark}\nLera: ${stats.relationships.lera}\nVika: ${stats.relationships.vika}\nSergey: ${stats.relationships.sergey}\nAnna: ${stats.relationships.anna}\nDima: ${stats.relationships.dima}\nLesha: ${stats.relationships.lyosha}`;
                 alert(statsText);
             }
 
@@ -1398,6 +1398,10 @@
                     ...stats.relationships,
                     ...(runStats.relationships && typeof runStats.relationships === 'object' ? runStats.relationships : {})
                 };
+                // Stage 0I: migrate pre-0I beta saves that could contain both lesha and lyosha.
+                const legacyLesha = Number(stats.relationships.lesha) || 0;
+                stats.relationships.lyosha = (Number(stats.relationships.lyosha) || 0) + legacyLesha;
+                delete stats.relationships.lesha;
                 stats.appearance = typeof runStats.appearance === 'string' ? runStats.appearance : 'style1';
                 applyProfileToStats();
                 console.log('Прохождение beta_2 восстановлено:', { currentChapter, currentScene });
@@ -1429,7 +1433,7 @@
     let senderName = '';
     let messages = [];
 
-    if (sceneId === 7) {
+    if (currentChapter === 1 && sceneId === 7) {
         avatarSrc = "assets/characters/lyosha/lyosha_messenger_ava.png";
         senderName = "Лёша";
         messages = [
@@ -1437,7 +1441,7 @@
             "Дима будет",
             "Приходи"
         ];
-    } else if (sceneId === 21) {
+    } else if (currentChapter === 1 && sceneId === 21) {
         avatarSrc = "assets/characters/mark/mark_messenger_ava.png";
         senderName = "Марк";
         messages = stats.language === "ru"
@@ -1826,6 +1830,10 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
                 'assets/characters/vika/vika_smile_style1.png',
                 'assets/characters/vika/vika_surprised_style1.png',
                 'assets/characters/vika/vika_thoughtful_style1.png',
+                'assets/characters/dima/dima_confident_style1.png',
+                'assets/characters/mark/mark_blush_style1.png',
+                'assets/characters/mark/mark_concerned_style1.png',
+                'assets/characters/sergey/sergey_confident_style1.png',
                 'assets/characters/vika/vika_worry_style1.png'
             ];
             let loaded = 0;
@@ -2513,7 +2521,7 @@ function clearDialogueHandlers(dialogueBox) {
 
         clearDialogueHandlers(dialogueBox);
         dialogueBox.style.pointerEvents = 'none';
-        const overlay = scene.phone === 1 ? showMessengerOverlay(scene.id, generation) : null;
+        const overlay = (scene.phoneMode === 'messenger' || scene.phone === 1) ? showMessengerOverlay(scene.id, generation) : null;
 
         if (scene.sound) playSound(scene.sound, generation);
         if (scene.music) playMusic(scene.music, generation);
@@ -3373,3 +3381,4 @@ function showChoiceEffects(effects, generation = runtimeGeneration) {
 }
 
 </script>
+<script src="assets/js/stage0i-runtime.js"></script>
