@@ -1835,7 +1835,6 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
     function resolveSceneTransition(scene) {
         const hasNextScene = Object.prototype.hasOwnProperty.call(scene, 'nextScene');
         const explicitEnding = scene.leadsToEnding ? resolveEndingId(scene.leadsToEnding) : null;
-        const pendingEnding = window.pendingEndingId ? resolveEndingId(window.pendingEndingId) : null;
 
         if (Number.isInteger(scene.nextScene)) {
             return { type: 'scene', sceneId: scene.nextScene, reason: 'scene-next-scene' };
@@ -1851,12 +1850,6 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
 
         if (explicitEnding) {
             return { type: 'ending', endingId: explicitEnding, reason: 'scene-ending' };
-        }
-
-        // A selected final route may currently live in pendingEndingId until Stage 0F
-        // moves ending ownership into validated/persisted story state.
-        if (pendingEnding && (!hasNextScene || scene.nextScene === null)) {
-            return { type: 'ending', endingId: pendingEnding, reason: 'pending-ending' };
         }
 
         // Explicit null is a terminal branch marker. Never fall through to id + 1.
@@ -1925,10 +1918,8 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
 
             if (target.type === 'ending') {
                 const endingId = resolveEndingId(target.endingId);
-                window.pendingEndingId = null;
                 await saveSession();
-                await loadFinals(endingId);
-                return true;
+                return await loadFinals(endingId);
             }
 
             console.error('[transitionTo] Неизвестный тип перехода:', target);
@@ -1947,12 +1938,6 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
         try {
             if (choice.cost) stats.diamonds -= choice.cost;
             updateDiamondsDisplay();
-
-            if (choice.leadsToEnding) {
-                window.pendingEndingId = resolveEndingId(choice.leadsToEnding);
-            } else {
-                window.pendingEndingId = null;
-            }
 
             await saveChoice(choice.id, choice.effects, choice.memoryTag, { persist: false });
             if (choice.effects) showChoiceEffects(choice.effects);
@@ -2856,56 +2841,42 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             document.body.appendChild(galleryDiv);
         }
 
-       function normalizeEndingId(endingId) {
-        const map = {
-        "Свобода с Димой": "freedom_with_dima",
-        "Тишина с Марком": "silence_with_mark",
-        "Вершина с Сергеем": "summit_with_sergey",
-        "Дружба превыше всего": "friendship_above_all",
-        "Одинокий путь": "lonely_path",
-        "Новый старт": "new_start"
-        };
-
-         return map[endingId] || endingId;
-       }
-
         async function loadFinals(endingId) {
-            const response = await fetch('assets/data/finals.json');
-            const finalsData = await response.json();
-           const normalizedEndingId = normalizeEndingId(endingId);
-           const ending = finalsData.endings.find(e => e.id === normalizedEndingId);
-            if (ending && checkRequirements(ending.requirements)) {
+            const normalizedEndingId = resolveEndingId(endingId);
+
+            try {
+                const response = await fetch('assets/data/finals.json');
+                if (!response.ok) {
+                    throw new Error(`Finals HTTP ${response.status}`);
+                }
+
+                const finalsData = await response.json();
+                const ending = Array.isArray(finalsData?.endings)
+                    ? finalsData.endings.find(candidate => candidate.id === normalizedEndingId)
+                    : null;
+
+                if (!ending) {
+                    console.error(`[loadFinals] Ending not found: ${normalizedEndingId}`);
+                    showErrorMessage(
+                        stats.language === "ru"
+                            ? `Финал ${normalizedEndingId} не найден`
+                            : `Ending ${normalizedEndingId} not found`
+                    );
+                    return false;
+                }
+
                 showEnding(ending);
-            } else {
-                console.warn('Концовка не найдена или требования не выполнены');
-                showStartScreen();
+                return true;
+            } catch (error) {
+                console.error('[loadFinals] Не удалось загрузить финал:', error);
+                showErrorMessage(
+                    stats.language === "ru"
+                        ? 'Не удалось загрузить финал. Попробуйте ещё раз.'
+                        : 'Failed to load ending. Please try again.'
+                );
+                return false;
             }
         }
-
-        function checkRequirements(requirements) {
-       if (!requirements) return true;
-
-       for (const [key, req] of Object.entries(requirements)) {
-        let value;
-
-        if (key.startsWith('relationships.')) {
-            const rel = key.split('.')[1];
-            value = stats.relationships[rel] || 0;
-        } else {
-            value = stats[key] || 0;
-        }
-
-        if (typeof req === 'string' && req.startsWith('>')) {
-            const threshold = parseInt(req.slice(1), 10);
-            if (!(value > threshold)) return false;
-        } else {
-            const threshold = parseInt(req, 10);
-            if (!(value >= threshold)) return false;
-        }
-    }
-
-    return true;
-     }
 
         function showEnding(ending) {
             const scene = ending.scenes[0];

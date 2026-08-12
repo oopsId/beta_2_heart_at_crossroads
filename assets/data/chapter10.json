@@ -140,8 +140,7 @@
                     "effects": {
                         "heart": 2,
                         "relationships.dima": 2
-                    },
-                    "leadsToEnding": "Свобода с Димой"
+                    }
                 },
                 {
                     "id": "mark",
@@ -154,8 +153,7 @@
                         "heart": 2,
                         "leaf": 1,
                         "relationships.mark": 2
-                    },
-                    "leadsToEnding": "Тишина с Марком"
+                    }
                 },
                 {
                     "id": "sergey",
@@ -167,8 +165,7 @@
                     "effects": {
                         "crown": 2,
                         "relationships.sergey": 2
-                    },
-                    "leadsToEnding": "Вершина с Сергеем"
+                    }
                 },
                 {
                     "id": "vika",
@@ -180,8 +177,7 @@
                     "effects": {
                         "leaf": 2,
                         "relationships.vika": 2
-                    },
-                    "leadsToEnding": "Дружба превыше всего"
+                    }
                 },
                 {
                     "id": "alone",
@@ -192,8 +188,7 @@
                     "nextScene": 10,
                     "effects": {
                         "crown": 2
-                    },
-                    "leadsToEnding": "Одинокий путь"
+                    }
                 },
                 {
                     "id": "premium",
@@ -207,8 +202,7 @@
                         "crown": 1,
                         "heart": 1,
                         "leaf": 1
-                    },
-                    "leadsToEnding": "Новый старт"
+                    }
                 }
             ]
         },
@@ -231,7 +225,8 @@
             },
             "sound": "sfx_car_engine",
             "music": "bgm_upbeat_friendship",
-            "nextScene": null
+            "nextScene": null,
+            "leadsToEnding": "freedom_with_dima"
         },
         {
             "id": 7,
@@ -252,7 +247,8 @@
             },
             "sound": "sfx_comforting_tone",
             "music": "bgm_upbeat_friendship",
-            "nextScene": null
+            "nextScene": null,
+            "leadsToEnding": "silence_with_mark"
         },
         {
             "id": 8,
@@ -273,7 +269,8 @@
             },
             "sound": "sfx_confident_step",
             "music": "bgm_corporate_tension",
-            "nextScene": null
+            "nextScene": null,
+            "leadsToEnding": "summit_with_sergey"
         },
         {
             "id": 9,
@@ -294,7 +291,8 @@
             },
             "sound": "sfx_excited_clap",
             "music": "bgm_upbeat_friendship",
-            "nextScene": null
+            "nextScene": null,
+            "leadsToEnding": "friendship_above_all"
         },
         {
             "id": 10,
@@ -315,7 +313,8 @@
             },
             "sound": "sfx_footsteps_sneakers",
             "music": "bgm_evening_dusk",
-            "nextScene": null
+            "nextScene": null,
+            "leadsToEnding": "lonely_path"
         },
         {
             "id": 11,
@@ -336,7 +335,8 @@
             },
             "sound": "sfx_style1_ambient",
             "music": "bgm_final_choice",
-            "nextScene": null
+            "nextScene": null,
+            "leadsToEnding": "new_start"
         }
     ]
 }
