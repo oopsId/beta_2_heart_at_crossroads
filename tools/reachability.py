@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import json
 from collections import deque, defaultdict
-from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,19 +34,16 @@ def effect_relationship_keys(chapters):
     return tuple(sorted(keys))
 
 
-def parse_condition(condition, stats, rels, chosen):
+def parse_condition(condition, stats, rels):
     if not condition:
         return True
+    # Current story has no choice-history conditions. Unknown structured conditions are
+    # intentionally rejected so this analyzer cannot silently overestimate reachability.
     if isinstance(condition, dict):
-        # Current story does not use structured conditions yet; handle useful primitives.
-        if 'choice' in condition:
-            return condition['choice'] in chosen
-        if 'notChoice' in condition:
-            return condition['notChoice'] not in chosen
-        return True
+        raise ValueError(f'Unsupported structured story condition: {condition}')
     parts = str(condition).split()
     if len(parts) != 3:
-        return True
+        raise ValueError(f'Unsupported story condition: {condition}')
     key, op, raw = parts
     if key.startswith('relationships.'):
         left = rels.get(key.split('.', 1)[1], 0)
@@ -55,10 +51,7 @@ def parse_condition(condition, stats, rels, chosen):
         left = rels.get(key, 0)
     else:
         left = stats.get(key, 0)
-    try:
-        right = int(raw)
-    except ValueError:
-        return True
+    right = int(raw)
     return {
         '>': left > right,
         '<': left < right,
@@ -66,7 +59,7 @@ def parse_condition(condition, stats, rels, chosen):
         '<=': left <= right,
         '==': left == right,
         '!=': left != right,
-    }.get(op, True)
+    }[op]
 
 
 def apply_effects(stats, rels, effects):
@@ -122,12 +115,11 @@ def next_for_choice(chapter_id, choice):
     return None
 
 
-def freeze(chapter, scene, stats, rels, chosen, rel_keys):
+def freeze(chapter, scene, stats, rels, rel_keys):
     return (
         chapter, scene,
         *(int(stats.get(k, 0)) for k in BASE_STATS),
         *(int(rels.get(k, 0)) for k in rel_keys),
-        tuple(sorted(chosen)),
     )
 
 
@@ -137,15 +129,13 @@ def thaw(key, rel_keys):
     stats = dict(zip(BASE_STATS, key[offset:offset + len(BASE_STATS)]))
     offset += len(BASE_STATS)
     rels = dict(zip(rel_keys, key[offset:offset + len(rel_keys)]))
-    offset += len(rel_keys)
-    chosen = set(key[offset])
-    return chapter, scene, stats, rels, chosen
+    return chapter, scene, stats, rels
 
 
 def main():
     chapters = load_chapters()
     rel_keys = effect_relationship_keys(chapters)
-    initial = freeze(1, 0, INITIAL, {}, set(), rel_keys)
+    initial = freeze(1, 0, INITIAL, {}, rel_keys)
     q = deque([initial])
     seen = {initial}
     final_states = []
@@ -155,7 +145,7 @@ def main():
         if len(seen) > MAX_STATES:
             raise SystemExit(f'reachability explosion: > {MAX_STATES} states')
         key = q.popleft()
-        chapter_id, scene_id, stats, rels, chosen = thaw(key, rel_keys)
+        chapter_id, scene_id, stats, rels = thaw(key, rel_keys)
         if chapter_id not in chapters:
             terminal['past-last-chapter'] += 1
             continue
@@ -164,15 +154,14 @@ def main():
             terminal[f'missing-scene-{chapter_id}:{scene_id}'] += 1
             continue
 
-        # Final decision point: collect actual jointly reachable state vectors before the six ending choices.
         if chapter_id == 10 and scene_id == 5:
-            final_states.append((stats, rels, chosen))
+            final_states.append((stats, rels))
             continue
 
         choices = list(scene.get('choices') or [])
         alternatives = []
         for choice in choices:
-            if not parse_condition(choice.get('condition'), stats, rels, chosen):
+            if not parse_condition(choice.get('condition'), stats, rels):
                 continue
             cost = int(choice.get('cost') or 0)
             if stats.get('diamonds', 0) < cost:
@@ -180,12 +169,8 @@ def main():
             alternatives.append(choice)
 
         timeout = scene.get('timeout')
-        if isinstance(timeout, dict):
-            if timeout.get('choiceId'):
-                # Already represented as a visible choice; no duplicate path needed.
-                pass
-            elif isinstance(timeout.get('outcome'), dict):
-                alternatives.append(timeout['outcome'])
+        if isinstance(timeout, dict) and not timeout.get('choiceId') and isinstance(timeout.get('outcome'), dict):
+            alternatives.append(timeout['outcome'])
 
         if alternatives:
             for choice in alternatives:
@@ -194,14 +179,11 @@ def main():
                 cost = int(choice.get('cost') or 0)
                 new_stats['diamonds'] = new_stats.get('diamonds', 0) - cost
                 new_stats, new_rels = apply_effects(new_stats, new_rels, choice.get('effects'))
-                new_chosen = set(chosen)
-                if choice.get('id'):
-                    new_chosen.add(choice['id'])
                 target = next_for_choice(chapter_id, choice)
                 if not target:
                     terminal['choice-terminal'] += 1
                     continue
-                new_key = freeze(target[0], target[1], new_stats, new_rels, new_chosen, rel_keys)
+                new_key = freeze(target[0], target[1], new_stats, new_rels, rel_keys)
                 if new_key not in seen:
                     seen.add(new_key)
                     q.append(new_key)
@@ -211,29 +193,25 @@ def main():
         if not target:
             terminal['scene-terminal'] += 1
             continue
-        new_key = freeze(target[0], target[1], stats, rels, chosen, rel_keys)
+        new_key = freeze(target[0], target[1], stats, rels, rel_keys)
         if new_key not in seen:
             seen.add(new_key)
             q.append(new_key)
 
-    def range_for(name, getter):
-        vals = [getter(s, r) for s, r, _ in final_states]
+    def values(getter):
+        vals = [getter(s, r) for s, r in final_states]
         return {'min': min(vals), 'max': max(vals), 'values': sorted(set(vals))} if vals else None
 
     summary = {
         'visitedStateCount': len(seen),
         'finalDecisionStateCount': len(final_states),
         'relationshipKeys': list(rel_keys),
-        'stats': {k: range_for(k, lambda s, r, k=k: s.get(k, 0)) for k in BASE_STATS},
-        'relationships': {k: range_for(k, lambda s, r, k=k: r.get(k, 0)) for k in rel_keys},
+        'stats': {k: values(lambda s, r, k=k: s.get(k, 0)) for k in BASE_STATS},
+        'relationships': {k: values(lambda s, r, k=k: r.get(k, 0)) for k in rel_keys},
         'terminalCounts': dict(terminal),
         'finalStates': [
-            {
-                'stats': s,
-                'relationships': r,
-                'choices': sorted(c),
-            }
-            for s, r, c in final_states
+            {'stats': s, 'relationships': r}
+            for s, r in final_states
         ],
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
