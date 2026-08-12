@@ -135,7 +135,8 @@
                         "message": {
                             "ru": "Хочу поговорить",
                             "en": "Want to talk"
-                        }
+                        },
+                        "avatar": "assets/characters/sergey/sergey_messenger_ava.png"
                     }
                 ]
             }
