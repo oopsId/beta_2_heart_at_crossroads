@@ -2992,7 +2992,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
 
         addEventListeners(detailContainer, ['click', 'touchstart'], () => {
             document.body.removeChild(detailContainer);
-            document.getElementById('gallery-container').style.background = "url('assets/images/shoebox_texture.png') center / cover no-repeat";
+            document.getElementById('gallery-container').style.background = "url('assets/backgrounds/shoebox_texture.png') center / cover no-repeat";
             clickSound.play().catch(err => console.warn("Ошибка звука:", err));
         });
     }

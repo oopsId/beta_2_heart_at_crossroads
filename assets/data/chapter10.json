@@ -225,7 +225,6 @@
             },
             "sound": "sfx_car_engine",
             "music": "bgm_upbeat_friendship",
-            "nextScene": null,
             "leadsToEnding": "freedom_with_dima"
         },
         {
@@ -247,7 +246,6 @@
             },
             "sound": "sfx_comforting_tone",
             "music": "bgm_upbeat_friendship",
-            "nextScene": null,
             "leadsToEnding": "silence_with_mark"
         },
         {
@@ -269,7 +267,6 @@
             },
             "sound": "sfx_confident_step",
             "music": "bgm_corporate_tension",
-            "nextScene": null,
             "leadsToEnding": "summit_with_sergey"
         },
         {
@@ -291,7 +288,6 @@
             },
             "sound": "sfx_excited_clap",
             "music": "bgm_upbeat_friendship",
-            "nextScene": null,
             "leadsToEnding": "friendship_above_all"
         },
         {
@@ -313,7 +309,6 @@
             },
             "sound": "sfx_footsteps_sneakers",
             "music": "bgm_evening_dusk",
-            "nextScene": null,
             "leadsToEnding": "lonely_path"
         },
         {
@@ -335,7 +330,6 @@
             },
             "sound": "sfx_style1_ambient",
             "music": "bgm_final_choice",
-            "nextScene": null,
             "leadsToEnding": "new_start"
         }
     ]

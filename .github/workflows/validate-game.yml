@@ -1,0 +1,77 @@
+name: Validate game runtime
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-game-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  structural:
+    name: Structural game validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate chapters, routes, assets and runtime invariants
+        run: |
+          mkdir -p artifacts
+          python3 tools/validate_game.py --report artifacts/structural-validation.json
+
+      - name: Upload structural report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: structural-validation
+          path: artifacts/structural-validation.json
+          if-no-files-found: ignore
+
+  browser:
+    name: Chromium runtime smoke
+    needs: structural
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Start Pages-like server
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/game-http.log 2>&1 &
+          sleep 1
+          curl --fail --silent --show-error http://127.0.0.1:8000/heart_at_crossroads.html >/dev/null
+
+      - name: Run browser regression smoke
+        run: |
+          mkdir -p artifacts
+          node tools/runtime_smoke.mjs | tee artifacts/runtime-smoke.json
+
+      - name: Upload browser report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-smoke
+          path: artifacts/runtime-smoke.json
+          if-no-files-found: ignore
+
+      - name: Server log on failure
+        if: failure()
+        run: cat /tmp/game-http.log || true
