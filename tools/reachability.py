@@ -5,10 +5,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / 'assets' / 'data'
-CORE_STATS = ('crown', 'heart', 'leaf', 'diamonds')
-CORE_RELS = ('dima', 'mark', 'sergey', 'vika')
 INITIAL = {'crown': 0, 'heart': 0, 'leaf': 0, 'diamonds': 10}
 MAX_STATES = 750000
+
+ENDING_PROJECTIONS = {
+    'freedom_with_dima': (('heart', 'diamonds'), ('dima',)),
+    'silence_with_mark': (('heart', 'leaf', 'diamonds'), ('mark',)),
+    'summit_with_sergey': (('crown', 'diamonds'), ('sergey',)),
+    'friendship_above_all': (('leaf', 'diamonds'), ('vika',)),
+    'lonely_path': (('crown', 'heart', 'leaf', 'diamonds'), ()),
+    'new_start': (('crown', 'heart', 'leaf', 'diamonds'), ()),
+}
 
 
 def load_chapters():
@@ -116,15 +123,14 @@ def explore(chapters, tracked_stats, tracked_rels):
         rels = dict(zip(tracked_rels, key[offset:offset + len(tracked_rels)]))
         return key[0], key[1], stats, rels
 
-    base_stats = {k: INITIAL.get(k, 0) for k in tracked_stats}
-    initial = freeze(1, 0, base_stats, {})
+    initial = freeze(1, 0, {k: INITIAL.get(k, 0) for k in tracked_stats}, {})
     seen = {initial}
     q = deque([initial])
     finals = set()
 
     while q:
         if len(seen) > MAX_STATES:
-            raise SystemExit(f'reachability explosion for projection {tracked_stats}/{tracked_rels}: > {MAX_STATES}')
+            raise SystemExit(f'reachability explosion for {tracked_stats}/{tracked_rels}: > {MAX_STATES}')
         key = q.popleft()
         chapter_id, scene_id, stats, rels = thaw(key)
         if chapter_id not in chapters:
@@ -144,7 +150,6 @@ def explore(chapters, tracked_stats, tracked_rels):
         if alternatives:
             for item in alternatives:
                 new_stats = dict(stats)
-                # diamonds controls authored cost availability even in small projections.
                 if 'diamonds' in tracked_stats:
                     cost = int(item.get('cost') or 0)
                     if new_stats.get('diamonds', 0) < cost:
@@ -167,12 +172,16 @@ def explore(chapters, tracked_stats, tracked_rels):
                 seen.add(nk)
                 q.append(nk)
 
-    return seen, finals
+    return len(seen), finals
 
 
-def summarize_values(values):
-    values = sorted(set(int(v) for v in values))
-    return {'min': min(values), 'max': max(values), 'values': values}
+def summary_for(rows, stats, rels):
+    columns = list(stats) + list(rels)
+    result = {'stateCount': len(rows), 'ranges': {}}
+    for idx, name in enumerate(columns):
+        values = sorted(set(int(row[idx]) for row in rows))
+        result['ranges'][name] = {'min': min(values), 'max': max(values), 'values': values}
+    return result
 
 
 def main():
@@ -180,50 +189,30 @@ def main():
     assert_no_story_conditions(chapters)
     rel_keys = all_relationship_keys(chapters)
 
-    seen, core_final = explore(chapters, CORE_STATS, CORE_RELS)
-    stat_ranges = {}
-    rel_ranges = {}
-    for idx, key in enumerate(CORE_STATS):
-        stat_ranges[key] = summarize_values(row[idx] for row in core_final)
-    base = len(CORE_STATS)
-    for idx, key in enumerate(CORE_RELS):
-        rel_ranges[key] = summarize_values(row[base + idx] for row in core_final)
+    ending_reports = {}
+    for ending_id, (stats, rels) in ENDING_PROJECTIONS.items():
+        visited, rows = explore(chapters, stats, rels)
+        report = summary_for(rows, stats, rels)
+        report['visitedStateCount'] = visited
+        ending_reports[ending_id] = report
 
-    # Non-ending relationships are measured independently so they cannot explode the exact
-    # ending frontier. No story condition currently depends on them.
+    relationship_ranges = {}
     for rel in rel_keys:
-        if rel in rel_ranges:
-            continue
         _, rows = explore(chapters, ('diamonds',), (rel,))
-        rel_ranges[rel] = summarize_values(row[1] for row in rows)
+        vals = sorted(set(int(row[1]) for row in rows))
+        relationship_ranges[rel] = {'min': min(vals), 'max': max(vals), 'values': vals}
 
-    # Cross-tab: for each candidate relationship score, show personality ranges that coexist
-    # with that exact score. This is enough to design relationship + personality gates without
-    # inventing impossible combinations.
-    joint = {}
-    for ridx, rel in enumerate(CORE_RELS):
-        rel_col = base + ridx
-        by_rel = {}
-        for score in sorted(set(row[rel_col] for row in core_final)):
-            subset = [row for row in core_final if row[rel_col] == score]
-            by_rel[str(score)] = {
-                stat: {'min': min(r[sidx] for r in subset), 'max': max(r[sidx] for r in subset)}
-                for sidx, stat in enumerate(('crown', 'heart', 'leaf'))
-            }
-        joint[rel] = by_rel
+    personality_ranges = {}
+    for stat in ('crown', 'heart', 'leaf'):
+        _, rows = explore(chapters, (stat, 'diamonds'), ())
+        vals = sorted(set(int(row[0]) for row in rows))
+        personality_ranges[stat] = {'min': min(vals), 'max': max(vals), 'values': vals}
 
-    summary = {
-        'exactProjection': {
-            'stats': list(CORE_STATS),
-            'relationships': list(CORE_RELS),
-            'visitedStateCount': len(seen),
-            'finalDecisionStateCount': len(core_final),
-        },
-        'stats': stat_ranges,
-        'relationships': dict(sorted(rel_ranges.items())),
-        'jointByRelationship': joint,
-    }
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    print(json.dumps({
+        'personality': personality_ranges,
+        'relationships': relationship_ranges,
+        'endingProjections': ending_reports,
+    }, ensure_ascii=False, indent=2))
 
 
 if __name__ == '__main__':
