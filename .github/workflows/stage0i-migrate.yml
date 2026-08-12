@@ -1,0 +1,28 @@
+name: Stage 0I migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage-0i-eligibility-and-runtime
+      - name: Apply Stage 0I migration
+        run: python3 tools/stage0i_migrate.py
+      - name: Commit migrated runtime and story data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add heart_at_crossroads.html assets/data assets/js/stage0i-runtime.js
+          if git diff --cached --quiet; then
+            echo "No migration changes"
+          else
+            git commit -m "Stage 0I: apply eligibility and VN behavior migration"
+            git push origin HEAD:stage-0i-eligibility-and-runtime
+          fi
