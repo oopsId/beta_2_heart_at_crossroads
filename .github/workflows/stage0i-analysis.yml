@@ -18,8 +18,11 @@ jobs:
         run: |
           mkdir -p artifacts
           python3 tools/reachability.py | tee artifacts/reachability.json
+      - name: Verify provisional ending gates are reachable
+        run: |
+          python3 tools/evaluate_gates.py | tee artifacts/ending-gates.json
       - name: Upload report
         uses: actions/upload-artifact@v4
         with:
           name: stage0i-reachability
-          path: artifacts/reachability.json
+          path: artifacts/
