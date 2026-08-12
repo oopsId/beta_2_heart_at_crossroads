@@ -1,0 +1,32 @@
+name: Stage 0H one-shot cleanup
+
+on:
+  push:
+    branches:
+      - stage0h-permanent-validator
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage0h-permanent-validator
+
+      - name: Apply structural cleanup
+        run: python3 tools/stage0h_cleanup.py
+
+      - name: Re-run structural validator
+        run: python3 tools/validate_game.py --report /tmp/structural-validation.json
+
+      - name: Commit generated game fixes
+        run: |
+          if git diff --quiet -- heart_at_crossroads.html assets/data/chapter10.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add heart_at_crossroads.html assets/data/chapter10.json
+          git commit -m 'Fix Stage 0H structural blockers'
+          git push origin HEAD:stage0h-permanent-validator
