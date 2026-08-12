@@ -1,0 +1,54 @@
+name: Exhaustive runtime audit
+
+on:
+  push:
+    branches:
+      - audit/runtime-audit-2026-08-12
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Static integrity audit
+        run: python3 audit/runtime_audit.py
+
+      - name: Prepare isolated Pages-like server
+        run: |
+          mkdir -p /tmp/audit-site
+          ln -s "$GITHUB_WORKSPACE" /tmp/audit-site/beta_2_heart_at_crossroads
+          ln -s "$GITHUB_WORKSPACE" /tmp/audit-site/heart_at_crossroads
+          python3 -m http.server 8000 --directory /tmp/audit-site >/tmp/audit-http.log 2>&1 &
+          echo $! > /tmp/audit-http.pid
+          sleep 1
+          curl -I http://127.0.0.1:8000/beta_2_heart_at_crossroads/heart_at_crossroads.html
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install browser runtime
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Browser runtime audit
+        run: node audit/browser_audit.mjs
+
+      - name: Server log
+        if: always()
+        run: cat /tmp/audit-http.log || true
+
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exhaustive-runtime-audit
+          path: audit-results/
+          if-no-files-found: error
