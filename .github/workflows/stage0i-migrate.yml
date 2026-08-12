@@ -1,6 +1,13 @@
 name: Stage 0I migration
 
 on:
+  push:
+    branches:
+      - stage-0i-eligibility-and-runtime
+    paths:
+      - .github/workflows/stage0i-migrate.yml
+      - tools/stage0i_migrate.py
+      - assets/js/stage0i-runtime.js
   workflow_dispatch:
 
 permissions:
