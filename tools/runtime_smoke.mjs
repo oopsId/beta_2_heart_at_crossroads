@@ -17,7 +17,9 @@ await page.waitForFunction(() =>
   typeof applyTimeoutOutcome === 'function' &&
   typeof resolveSceneTransition === 'function' &&
   typeof stage0iEnsureFinals === 'function' &&
-  typeof stage0iEndingEligible === 'function'
+  typeof stage0iEndingEligible === 'function' &&
+  typeof stage0jRenderSceneVisuals === 'function' &&
+  typeof stage0jShowComposeOverlay === 'function'
 );
 await page.waitForTimeout(100);
 
@@ -286,9 +288,9 @@ assert(result.unlockedDima, 'Reachable Dima gate did not unlock before click', J
 assert(result.premiumHasCost === false && !result.premiumText.includes('20 бриллиантов'), 'Impossible 20-diamond final gate remains', JSON.stringify(result));
 results.eligibility = true;
 
-// 8. Stage 0E timed messenger scenes still render the phone overlay (chapter 2 / scene 1 regression).
+// 8. Chapter 2 / scene 1 uses the compose overlay: Anna header, empty input caret, three notifications, no duplicated narration.
 result = await page.evaluate(async () => {
-  const generation = beginRuntimeSession('0i-phone');
+  const generation = beginRuntimeSession('0j-phone-compose');
   resetGameState(false);
   currentChapter = 2;
   currentScene = 1;
@@ -298,21 +300,25 @@ result = await page.evaluate(async () => {
   const originalPlaySound = playSound;
   const originalPlayMusic = playMusic;
   try {
-    currentBackground = scene.background;
     typeText = (_text, _element, callback) => { callback?.(); return true; };
     playSound = () => null;
     playMusic = () => null;
     showSceneWithTimer(scene, generation);
     await new Promise(resolve => window.setTimeout(resolve, 250));
-    const overlay = document.getElementById('messenger-overlay');
-    const hrefs = overlay ? [...overlay.querySelectorAll('image')].map(image => image.getAttribute('href') || '') : [];
+    const overlay = document.getElementById('phone-compose-overlay');
+    const notifications = overlay ? [...overlay.querySelectorAll('.stage0j-notification')] : [];
+    const hrefs = overlay ? [...overlay.querySelectorAll('img')].map(image => image.getAttribute('src') || '') : [];
     const snapshot = {
       phoneMode: scene.phoneMode,
       exists: Boolean(overlay),
       text: overlay?.textContent || '',
-      hasAnnaAvatar: hrefs.some(href => href.includes('anna_messenger_ava.png'))
+      notifications: notifications.length,
+      senders: notifications.map(node => node.dataset.senderId),
+      hasAnnaAvatar: hrefs.some(href => href.includes('anna_messenger_ava.png')),
+      hasCaret: Boolean(overlay?.querySelector('.stage0j-compose-caret')),
+      dialogue: scene.text.ru
     };
-    invalidateRuntimeSession('0i-phone-done');
+    invalidateRuntimeSession('0j-phone-compose-done');
     return snapshot;
   } finally {
     typeText = originalTypeText;
@@ -320,8 +326,11 @@ result = await page.evaluate(async () => {
     playMusic = originalPlayMusic;
   }
 });
-assert(result.phoneMode === 'messenger' && result.exists, 'Timed messenger overlay disappeared after Stage 0E', JSON.stringify(result));
-assert((result.text.includes('Анна') || result.text.includes('Anna')) && result.hasAnnaAvatar, 'Chapter 2 messenger overlay lost Anna header/avatar', JSON.stringify(result));
+assert(result.phoneMode === 'compose' && result.exists, 'Compose phone overlay did not render', JSON.stringify(result));
+assert(result.hasAnnaAvatar && result.hasCaret && result.notifications === 3, 'Compose overlay lost Anna avatar/caret/notifications', JSON.stringify(result));
+assert(result.senders.join(',') === 'lyosha,mark,sergey', 'Compose notification senders drifted from final choices', JSON.stringify(result));
+assert(!result.text.includes('Пальцы замерли') && !result.text.includes('My fingers hovered'), 'Phone overlay duplicates narration text', JSON.stringify(result));
+assert(!result.dialogue.includes('Катя в WhatsApp'), 'Scene narration still contains stale Katya branch that is not selectable', JSON.stringify(result));
 results.phoneOverlay = true;
 
 // 9. Speaker focus follows the actual displayed character instead of hard-coded Anna/Vika positions.
@@ -372,6 +381,42 @@ assert(result.started && result.afterRevealFirst.text === 'FIRST' && result.afte
 assert(result.afterStartSecond.text.length > 0 && result.afterStartSecond.text !== 'FIRST' && result.afterStartSecond.callbacks === 0, 'Second click did not start next part', JSON.stringify(result));
 assert(result.afterRevealSecond.text === 'SECOND' && result.afterRevealSecond.callbacks === 1 && result.afterRevealSecond.isTyping === false, 'Final part did not reveal and hand control to transition on next click', JSON.stringify(result));
 results.typewriter = true;
+
+// 11. Visual swap is atomic: old scene remains visible while replacement images decode, then all visual slots commit together.
+result = await page.evaluate(async () => {
+  const generation = beginRuntimeSession('0j-atomic-render');
+  resetGameState(false);
+  const bg = document.getElementById('background');
+  const left = document.getElementById('character-left');
+  const right = document.getElementById('character-right');
+  bg.style.backgroundImage = 'url("old-bg")';
+  left.style.backgroundImage = 'url("old-left")';
+  right.style.backgroundImage = 'url("old-right")';
+
+  const originalDecode = window.stage0jDecodeImage;
+  const resolvers = [];
+  window.stage0jDecodeImage = () => new Promise(resolve => resolvers.push(resolve));
+  const scene = {
+    id: 999,
+    background: 'bg_apartment_morning',
+    characterLeft: 'anna_thoughtful_style2',
+    characterRight: 'lyosha_happy_style1',
+    speaker: { ru: 'Анна', en: 'Anna' }
+  };
+
+  const renderPromise = window.stage0jRenderSceneVisuals(scene, 'ru', stats, generation);
+  await new Promise(resolve => window.setTimeout(resolve, 30));
+  const before = { bg: bg.style.backgroundImage, left: left.style.backgroundImage, right: right.style.backgroundImage };
+  resolvers.splice(0).forEach(resolve => resolve(true));
+  const ok = await renderPromise;
+  const after = { bg: bg.style.backgroundImage, left: left.style.backgroundImage, right: right.style.backgroundImage };
+  window.stage0jDecodeImage = originalDecode;
+  invalidateRuntimeSession('0j-atomic-render-done');
+  return { ok, before, after };
+});
+assert(result.before.bg.includes('old-bg') && result.before.left.includes('old-left') && result.before.right.includes('old-right'), 'Renderer cleared old scene before replacement decoded', JSON.stringify(result));
+assert(result.ok && result.after.bg.includes('bg_apartment_morning.png') && result.after.left.includes('anna_thoughtful_style2.png') && result.after.right.includes('lyosha_happy_style1.png'), 'Atomic visual commit did not install complete new scene', JSON.stringify(result));
+results.atomicVisualSwap = true;
 
 console.log(JSON.stringify({ status: 'PASS', ...results }, null, 2));
 await browser.close();
