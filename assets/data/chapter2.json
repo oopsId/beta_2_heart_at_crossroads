@@ -52,7 +52,6 @@
                         "ru": "[Лёше: ‘Буду!’] (10 сек)",
                         "en": "[To Lyosha: ‘I’ll be there!’] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 2,
                     "effects": {
                         "crown": 1,
@@ -65,7 +64,6 @@
                         "ru": "[Марку: ‘В клубе позже, а ты?’] (10 сек)",
                         "en": "[To Mark: ‘At the club later, you?’] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 3,
                     "effects": {
                         "heart": 1,
@@ -78,14 +76,20 @@
                         "ru": "[Сергею: ‘О чём?’] (10 сек)",
                         "en": "[To Sergey: ‘About what?’] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 4,
                     "effects": {
                         "crown": 1,
                         "relationships.sergey": 1
                     }
                 }
-            ]
+            ],
+            "timeout": {
+                "seconds": 10,
+                "outcome": {
+                    "id": "no_reply",
+                    "nextScene": 5
+                }
+            }
         },
         {
             "id": 2,

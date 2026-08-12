@@ -194,7 +194,6 @@
                         "ru": "[Марку: ‘Что случилось?’] (10 сек)",
                         "en": "[To Mark: ‘What’s wrong?’] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 7,
                     "effects": {
                         "heart": 1,
@@ -207,7 +206,6 @@
                         "ru": "[Диме: ‘Буду!’] (10 сек)",
                         "en": "[To Dima: ‘I’ll be there!’] (10 sec)"
                     },
-                    "timer": 10,
                     "nextScene": 8,
                     "effects": {
                         "heart": 1,
@@ -222,7 +220,11 @@
                     },
                     "nextScene": 9
                 }
-            ]
+            ],
+            "timeout": {
+                "seconds": 10,
+                "choiceId": "ignore"
+            }
         },
         {
             "id": 7,

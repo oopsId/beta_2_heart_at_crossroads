@@ -1748,7 +1748,7 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
         function createChoiceButton(choice) {
             const btn = document.createElement('button');
             const hasCostInText = choice.text[stats.language].includes(`${choice.cost}`);
-            let buttonText = choice.text[stats.language].replace(" (10 сек)", "").replace(" (10 sec)", "");
+            let buttonText = choice.text[stats.language].replace(/\s*\(\d+(?:[.,]\d+)?\s*(?:сек|sec)\)/i, '').trim();
             btn.textContent = choice.cost && !hasCostInText 
                 ? `${buttonText} (${choice.cost} бриллиантов)` 
                 : buttonText;
@@ -2081,7 +2081,7 @@ function clearDialogueHandlers(dialogueBox) {
 
     console.log(`[handleChoices] Обработка выбора для сцены ${scene.id}`);
 
-    if (scene.choices.some(c => c.timer)) {
+    if (getTimeoutConfig(scene)) {
         showSceneWithTimer(scene);
         return;
     }
@@ -2132,6 +2132,55 @@ function clearDialogueHandlers(dialogueBox) {
     dialogueBox.style.pointerEvents = 'auto';
    }
    
+    // Stage 0E: timeout behavior is explicit story data, never a magic choice id.
+    function getTimeoutConfig(scene) {
+        const timeout = scene?.timeout;
+        if (timeout === undefined || timeout === null) return null;
+        if (typeof timeout !== 'object' || Array.isArray(timeout)) {
+            throw new Error(`Scene ${scene?.id}: invalid timeout config`);
+        }
+
+        const seconds = Number(timeout.seconds);
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            throw new Error(`Scene ${scene?.id}: timeout.seconds must be positive`);
+        }
+
+        if (typeof timeout.choiceId === 'string' && timeout.choiceId) {
+            const exists = Array.isArray(scene.choices) && scene.choices.some(choice => choice.id === timeout.choiceId);
+            if (!exists) throw new Error(`Scene ${scene?.id}: timeout choice ${timeout.choiceId} not found`);
+            return { seconds, choiceId: timeout.choiceId };
+        }
+
+        if (timeout.outcome && typeof timeout.outcome === 'object' && typeof timeout.outcome.id === 'string') {
+            const outcome = timeout.outcome;
+            const hasRoute = Number.isInteger(outcome.nextScene)
+                || Number.isInteger(outcome.nextChapter)
+                || outcome.nextChapter === true
+                || typeof outcome.leadsToEnding === 'string';
+            if (!hasRoute) throw new Error(`Scene ${scene?.id}: timeout outcome has no route`);
+            return { seconds, outcome };
+        }
+
+        throw new Error(`Scene ${scene?.id}: timeout requires choiceId or outcome`);
+    }
+
+    async function applyTimeoutOutcome(scene, timeoutConfig, options = {}) {
+        if (timeoutConfig.choiceId) {
+            const choice = scene.choices.find(candidate => candidate.id === timeoutConfig.choiceId);
+            return await applyChoice(choice, options);
+        }
+
+        const outcome = timeoutConfig.outcome;
+        return await applyChoice({
+            id: outcome.id,
+            nextScene: outcome.nextScene,
+            nextChapter: outcome.nextChapter,
+            leadsToEnding: outcome.leadsToEnding,
+            effects: outcome.effects,
+            memoryTag: outcome.memoryTag
+        }, options);
+    }
+
     async function showScene(sceneId) {
     console.log(`Показ сцены ${sceneId}`);
     const scene = scriptData?.scenes?.find(s => s.id === sceneId);
@@ -2142,7 +2191,7 @@ function clearDialogueHandlers(dialogueBox) {
         return false;
     }
 
-    const hasTimedChoices = Array.isArray(scene.choices) && scene.choices.some(c => c.timer);
+    const hasTimedChoices = getTimeoutConfig(scene) !== null;
     if (hasTimedChoices) {
         return showSceneWithTimer(scene);
     }
@@ -2224,9 +2273,10 @@ function clearDialogueHandlers(dialogueBox) {
     return true;
 }
 
-    function showSceneWithTimer(scene, timeoutMs = 10000) {
-    console.log(`[showSceneWithTimer] Показ сцены ${scene.id} с таймером`);
+    function showSceneWithTimer(scene) {
+    console.log(`[showSceneWithTimer] Показ сцены ${scene.id} с явным timeout outcome`);
 
+    const timeoutConfig = getTimeoutConfig(scene);
     const dialogueElement = document.getElementById('dialogue-text');
     const dialogueBox = document.querySelector('.dialogue-box');
     updateProgress(scene.id, scriptData.scenes.length);
@@ -2252,10 +2302,7 @@ function clearDialogueHandlers(dialogueBox) {
         clearDialogueHandlers(dialogueBox);
         dialogueBox.style.pointerEvents = 'none';
 
-        let overlay = null;
-        if (scene.choices && scene.choices.some(c => c.timer)) {
-            overlay = showMessengerOverlay(scene.id);
-        }
+        const overlay = scene.phone === 1 ? showMessengerOverlay(scene.id) : null;
 
         if (scene.sound) playSound(scene.sound);
         if (scene.music) playMusic(scene.music);
@@ -2270,8 +2317,13 @@ function clearDialogueHandlers(dialogueBox) {
             const cleanupTimer = () => {
                 if (countdownInterval) clearInterval(countdownInterval);
                 if (timer) clearTimeout(timer);
+                countdownInterval = null;
+                timer = null;
                 document.getElementById('timer-countdown')?.remove();
-                if (tickSound) tickSound.pause();
+                if (tickSound) {
+                    tickSound.pause();
+                    tickSound.currentTime = 0;
+                }
             };
 
             scene.choices.forEach(choice => {
@@ -2291,8 +2343,8 @@ function clearDialogueHandlers(dialogueBox) {
                 dialogueBox.appendChild(btn);
             });
 
-            const timerDuration = scene.choices.find(c => c.timer)?.timer * 1000 || timeoutMs;
-            let timeLeft = timerDuration / 1000;
+            const timerDuration = timeoutConfig.seconds * 1000;
+            let timeLeft = Math.ceil(timeoutConfig.seconds);
 
             const countdownElement = document.createElement('div');
             countdownElement.id = 'timer-countdown';
@@ -2304,8 +2356,8 @@ function clearDialogueHandlers(dialogueBox) {
             tickSound.play().catch(err => console.warn('Ошибка воспроизведения sfx_tick:', err));
 
             countdownInterval = setInterval(() => {
-                timeLeft--;
-                countdownElement.textContent = Math.max(0, timeLeft);
+                timeLeft = Math.max(0, timeLeft - 1);
+                countdownElement.textContent = timeLeft;
                 if (overlay) {
                     overlay.classList.add('flash-svg');
                     setTimeout(() => overlay?.classList.remove('flash-svg'), 500);
@@ -2313,27 +2365,18 @@ function clearDialogueHandlers(dialogueBox) {
                 if ('vibrate' in navigator) navigator.vibrate(200);
                 if (timeLeft <= 0) {
                     clearInterval(countdownInterval);
+                    countdownInterval = null;
                     tickSound?.pause();
                 }
             }, 1000);
 
             timer = setTimeout(async () => {
-                const defaultChoice = scene.choices.find(c => c.id === 'ignore');
-                console.log(`[showSceneWithTimer] Таймер истёк, default=${defaultChoice?.id || 'не найден'}`);
-
-                if (defaultChoice) {
-                    await applyChoice(defaultChoice, { overlay, cleanup: cleanupTimer });
-                    return;
-                }
-
-                cleanupTimer();
-                if (lastScene?.id === scene.id) {
-                    await transitionTo({ type: 'chapter', chapterId: currentChapter + 1, reason: 'legacy-timer-last-scene' }, { overlay });
-                } else {
-                    console.warn('Нет явно определённого исхода таймера; Stage 0E должен описать timeout outcome');
-                }
+                console.log(`[showSceneWithTimer] Таймер сцены ${scene.id} истёк`);
+                await applyTimeoutOutcome(scene, timeoutConfig, { overlay, cleanup: cleanupTimer });
             }, timerDuration);
         });
+
+        return true;
     };
 
     if (shouldFade) {
@@ -2341,9 +2384,11 @@ function clearDialogueHandlers(dialogueBox) {
             applyScene();
             fadeIn();
         });
-    } else {
-        applyScene();
+        return true;
     }
+
+    applyScene();
+    return true;
 }
 
         function showPremiumGallery() {
