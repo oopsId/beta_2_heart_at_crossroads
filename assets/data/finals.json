@@ -11,7 +11,7 @@
                 "ru": "Свобода с Димой",
                 "en": "Freedom with Dima"
             },
-            "requirements": {
+            "legacyRequirements": {
                 "heart": 15
             },
             "scenes": [
@@ -48,7 +48,7 @@
                 "ru": "Тишина с Марком",
                 "en": "Silence with Mark"
             },
-            "requirements": {
+            "legacyRequirements": {
                 "heart": 15,
                 "leaf": 10
             },
@@ -86,7 +86,7 @@
                 "ru": "Вершина с Сергеем",
                 "en": "Summit with Sergey"
             },
-            "requirements": {
+            "legacyRequirements": {
                 "crown": 15
             },
             "scenes": [
@@ -123,7 +123,7 @@
                 "ru": "Одинокий путь",
                 "en": "Lonely Path"
             },
-            "requirements": {
+            "legacyRequirements": {
                 "crown": "> heart + leaf"
             },
             "scenes": [
@@ -160,7 +160,7 @@
                 "ru": "Дружба превыше всего",
                 "en": "Friendship Above All"
             },
-            "requirements": {
+            "legacyRequirements": {
                 "leaf": 15
             },
             "scenes": [
@@ -197,7 +197,7 @@
                 "ru": "Новый старт",
                 "en": "New Start"
             },
-            "requirements": {
+            "legacyRequirements": {
                 "crown": 10,
                 "heart": 10,
                 "leaf": 10
