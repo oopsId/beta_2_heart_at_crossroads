@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="./">
     <title>Сердце на перекрёстке</title>
     <style>
         /* Стили остаются без изменений */
         @font-face {
             font-family: 'LobsterTwo';
-            src: url('/heart_at_crossroads/assets/fonts/LobsterTwo-Bold.ttf') format('truetype');
+            src: url('assets/fonts/LobsterTwo-Bold.ttf') format('truetype');
             font-weight: bold;
             font-style: normal;
         }
         @font-face {
             font-family: 'GreatVibes';
-            src: url('/heart_at_crossroads/assets/fonts/GreatVibes-Regular.ttf') format('truetype');
+            src: url('assets/fonts/GreatVibes-Regular.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
         @font-face {
             font-family: 'GoodVibesCyr';
-            src: url('/heart_at_crossroads/assets/fonts/GoodVibesCyr.ttf') format('truetype');
+            src: url('assets/fonts/GoodVibesCyr.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
@@ -260,7 +261,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: url('/heart_at_crossroads/assets/backgrounds/start_screen.png') no-repeat center center fixed;
+    background: url('assets/backgrounds/start_screen.png') no-repeat center center fixed;
     background-size: cover;
     z-index: 3000; /* Увеличено с 5 до 3000 */
     pointer-events: auto;
@@ -502,7 +503,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background-image: url('/heart_at_crossroads/assets/backgrounds/shoebox_texture.png');
+        background-image: url('assets/backgrounds/shoebox_texture.png');
         background-size: cover;
         background-position: center;
         background-repeat: no-repeat;
@@ -733,7 +734,7 @@
         </div>
         <div id="menu" style="display: none;">
             <div id="diamonds">
-                <img src="/heart_at_crossroads/assets/ui/diamonds.png" alt="Бриллианты">
+                <img src="assets/ui/diamonds.png" alt="Бриллианты">
                 <span id="diamonds-count">100</span>
             </div>
             <button id="menu-btn" data-ru="Меню" data-en="Menu">Меню</button>
@@ -741,9 +742,7 @@
         </div>
         <div id="particles" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;"></div>
     </div>
-
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
     <script>
          // Добавляем данные о карточках в начало скрипта
         const cardSeries = {
@@ -773,21 +772,8 @@
             </svg>`
         };
 
-        // Проверка Telegram
-        const isTelegram = !!(window.Telegram && window.Telegram.WebApp && Telegram.WebApp.initDataUnsafe);
-        if (isTelegram) {
-            try {
-                Telegram.WebApp.ready();
-                console.log('Telegram Web App инициализирован');
-            } catch (error) {
-                console.error('Ошибка инициализации Telegram:', error);
-                alert('Ошибка Telegram Web App. Функции могут быть ограничены.');
-            }
-        } else {
-            console.log('Запуск в браузере');
-        }
-
-        const userId = isTelegram ? Telegram.WebApp.initDataUnsafe.user?.id : null;
+        // Stage 0B: browser is the only supported runtime.
+        // Desktop, mobile browser and a future PWA use the same engine.
         let currentChapter = 1;
         let currentScene = 0;
         let choices = [];
@@ -813,7 +799,7 @@
         function playSound(sound) {
             if (sound) {
             const fileName = /\.(mp3|wav|ogg|m4a)$/i.test(sound) ? sound : `${sound}.mp3`;
-            const audio = new Audio(`/heart_at_crossroads/assets/sounds/${fileName}`);
+            const audio = new Audio(`assets/sounds/${fileName}`);
             audio.play()
             .catch(error => {
             console.error(`Ошибка воспроизведения звука ${sound}:`, error);
@@ -830,7 +816,7 @@
         }
 
         const fileName = /\.(mp3|wav|ogg|m4a)$/i.test(music) ? music : `${music}.mp3`;
-        window.currentMusic = new Audio(`/heart_at_crossroads/assets/sounds/${fileName}`);
+        window.currentMusic = new Audio(`assets/sounds/${fileName}`);
         window.currentMusic.loop = true;
         window.currentMusic.play()
             .catch(error => {
@@ -848,33 +834,16 @@
             setTimeout(() => errorDiv.remove(), 3000);
         }
 
-        // Улучшенные функции хранения
+        // Browser-only persistence (Stage 0B). Legacy platform storage was removed intentionally.
         function saveToStorage(key, value) {
             return new Promise((resolve, reject) => {
                 try {
-                    if (isTelegram && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage) {
-                        window.Telegram.WebApp.CloudStorage.setItem(key, value)
-                            .then(() => {
-                                console.log(`Сохранено в Telegram CloudStorage: ${key}`);
-                                resolve();
-                            })
-                            .catch(err => {
-                                console.warn('Ошибка Telegram CloudStorage, переход на localStorage:', err);
-                                localStorage.setItem(key, value);
-                                console.log(`Сохранено в localStorage: ${key}`);
-                                resolve();
-                            });
-                    } else {
-                        localStorage.setItem(key, value);
-                        console.log(`Сохранено в localStorage: ${key}`);
-                        resolve();
-                    }
-                } catch (error) {
-                    console.warn('Ошибка сохранения, переход на in-memory storage:', error);
-                    if (!window._inMemoryStorage) window._inMemoryStorage = {};
-                    window._inMemoryStorage[key] = value;
-                    console.log(`Сохранено в in-memory storage: ${key}`);
+                    localStorage.setItem(key, value);
+                    console.log(`Сохранено в localStorage: ${key}`);
                     resolve();
+                } catch (error) {
+                    console.error(`Ошибка сохранения в localStorage: ${key}`, error);
+                    reject(error);
                 }
             });
         }
@@ -882,29 +851,25 @@
         function getFromStorage(key) {
             return new Promise((resolve, reject) => {
                 try {
-                    if (isTelegram && window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.CloudStorage) {
-                        window.Telegram.WebApp.CloudStorage.getItem(key)
-                            .then(value => {
-                                console.log(`Получено из Telegram CloudStorage: ${key}`);
-                                resolve(value);
-                            })
-                            .catch(err => {
-                                console.warn('Ошибка Telegram CloudStorage, переход на localStorage:', err);
-                                const value = localStorage.getItem(key);
-                                console.log(`Получено из localStorage: ${key}`);
-                                resolve(value);
-                            });
-                    } else {
-                        const value = localStorage.getItem(key);
-                        console.log(`Получено из localStorage: ${key}`);
-                        resolve(value);
-                    }
-                } catch (error) {
-                    console.warn('Ошибка получения, переход на in-memory storage:', error);
-                    if (!window._inMemoryStorage) window._inMemoryStorage = {};
-                    const value = window._inMemoryStorage[key] || null;
-                    console.log(`Получено из in-memory storage: ${key}`);
+                    const value = localStorage.getItem(key);
+                    console.log(`Получено из localStorage: ${key}`);
                     resolve(value);
+                } catch (error) {
+                    console.error(`Ошибка чтения localStorage: ${key}`, error);
+                    reject(error);
+                }
+            });
+        }
+
+        function removeFromStorage(key) {
+            return new Promise((resolve, reject) => {
+                try {
+                    localStorage.removeItem(key);
+                    console.log(`Удалено из localStorage: ${key}`);
+                    resolve();
+                } catch (error) {
+                    console.error(`Ошибка удаления из localStorage: ${key}`, error);
+                    reject(error);
                 }
             });
         }
@@ -975,12 +940,8 @@
                 const inputPassword = document.getElementById('password-input').value;
                 try {
                     if (inputPassword === tempPassword || inputPassword === correctPassword) {
+                        await saveToStorage('tempAccessGranted', true);
                         if (inputPassword === correctPassword) {
-                            let authorizedUsers = JSON.parse(await getFromStorage('authorized_users') || '[]');
-                            if (userId && !authorizedUsers.includes(userId)) {
-                                authorizedUsers.push(userId);
-                                await saveToStorage('authorized_users', JSON.stringify(authorizedUsers));
-                            }
                             stats.isAuthorized = true;
                         }
                         startNewGame();
@@ -1054,7 +1015,7 @@
                 .then(session => {
                     console.log('Сессия загружена:', session);
                     if (session) showStartScreen();
-                    else checkAuthorization();
+                    else showStartScreen();
                 })
                 .catch(error => {
                     console.error('Ошибка загрузки сессии:', error);
@@ -1115,21 +1076,6 @@
             const title = document.getElementById('title');
             title.innerHTML = lang === "ru" ? '<span>Сердце</span><span>на перекрёстке</span>' : '<span>Heart</span><span>at the Crossroads</span>';
             title.className = lang === "ru" ? "ru" : "en";
-        }
-
-        async function checkAuthorization() {
-            try {
-                const authorizedUsers = (await getFromStorage('authorized_users')) || [];
-                if (userId && authorizedUsers.includes(userId)) {
-                    stats.isAuthorized = true;
-                    startGame();
-                } else {
-                    showStartScreen();
-                }
-            } catch (error) {
-                console.error('Ошибка авторизации:', error);
-                showStartScreen();
-            }
         }
 
         async function checkTempPassword(callback) {
@@ -1197,7 +1143,7 @@
     let messages = [];
 
     if (sceneId === 7) {
-        avatarSrc = "/heart_at_crossroads/assets/characters/lyosha/lyosha_messenger_ava.png";
+        avatarSrc = "assets/characters/lyosha/lyosha_messenger_ava.png";
         senderName = "Лёша";
         messages = [
             "Тусим вечером",
@@ -1205,7 +1151,7 @@
             "Приходи"
         ];
     } else if (sceneId === 21) {
-        avatarSrc = "/heart_at_crossroads/assets/characters/mark/mark_messenger_ava.png";
+        avatarSrc = "assets/characters/mark/mark_messenger_ava.png";
         senderName = "Марк";
         messages = stats.language === "ru"
             ? ["Ты красивая,", "когда теряешься"]
@@ -1213,7 +1159,7 @@
     } else if (sceneData.phoneSenderName && sceneData.phoneMessages) {
         const senderId = sceneData.phoneSenderId || 'unknown';
         senderName = sceneData.phoneSenderName[stats.language] || sceneData.phoneSenderName.ru || "Unknown";
-        avatarSrc = `/heart_at_crossroads/assets/characters/${senderId}/${senderId}_messenger_ava.png`;
+        avatarSrc = `assets/characters/${senderId}/${senderId}_messenger_ava.png`;
 
         const rawMessages = sceneData.phoneMessages[stats.language] || [];
         messages = Array.isArray(rawMessages) ? rawMessages : [String(rawMessages)];
@@ -1227,7 +1173,7 @@
             "unknown"
         );
 
-        avatarSrc = `/heart_at_crossroads/assets/characters/${senderId}/${senderId}_messenger_ava.png`;
+        avatarSrc = `assets/characters/${senderId}/${senderId}_messenger_ava.png`;
 
         const fallbackText = sceneData.text?.[stats.language] || "Сообщение...";
         messages = [fallbackText.length > 28 ? `${fallbackText.slice(0, 28)}...` : fallbackText];
@@ -1266,7 +1212,7 @@
     svg.innerHTML = `
         <rect x="20" y="20" width="260" height="460" rx="30" fill="#333" stroke="#555" stroke-width="2"/>
         <rect x="30" y="50" width="240" height="400" rx="10" fill="#fff"/>
-        <image href="/heart_at_crossroads/assets/backgrounds/bg_phone_ui.png" x="30" y="50" width="240" height="400" preserveAspectRatio="xMidYMid slice" opacity="0.3"/>
+        <image href="assets/backgrounds/bg_phone_ui.png" x="30" y="50" width="240" height="400" preserveAspectRatio="xMidYMid slice" opacity="0.3"/>
 
         <rect x="30" y="50" width="240" height="50" fill="#fff"/>
         <clipPath id="avatarClip">
@@ -1350,7 +1296,7 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
     overlay.id = 'default-phone-overlay';
     overlay.classList.add('phone-overlay');
 
-    overlay.style.background = 'url(/heart_at_crossroads/assets/backgrounds/bg_phone_ui.png) no-repeat center/cover';
+    overlay.style.background = 'url(assets/backgrounds/bg_phone_ui.png) no-repeat center/cover';
     overlay.style.position = 'absolute';
     overlay.style.top = '50%';
     overlay.style.left = '50%';
@@ -1509,76 +1455,76 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
             loadingStatus.style.cssText = 'position: fixed; bottom: 10px; left: 10px; color: white; font-size: 12px; z-index: 11; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 3px;';
             document.body.appendChild(loadingStatus);
             const images = [
-                '/heart_at_crossroads/assets/backgrounds/start_screen.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_apartment_morning.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_coffee_shop.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_phone_messenger.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_street_day_trash.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_street_dusk_end.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_street_night.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_webstudio_day.png',
-                '/heart_at_crossroads/assets/backgrounds/bg_webstudio_night.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_angry_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_happy_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_happy_style2.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_neutral_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_neutral_style1_summer.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_neutral_style2.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_neutral_style3.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_sad_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_sad_style2.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_smile_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_smile_style1_summer.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_smile_style2.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_smile_style2_summer.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_style2.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_surprised_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_surprised_style2.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_thoughtful_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_thoughtful_style1_summer.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_thoughtful_style2.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_worry_style1.png',
-                '/heart_at_crossroads/assets/characters/anna/anna_worry_style2.png',
-                '/heart_at_crossroads/assets/characters/dima/dima_happy_style1.png',
-                '/heart_at_crossroads/assets/characters/dima/dima_neutral_style1.png',
-                '/heart_at_crossroads/assets/characters/dima/dima_sad_style1.png',
-                '/heart_at_crossroads/assets/characters/dima/dima_smile_style1.png',
-                '/heart_at_crossroads/assets/characters/dima/dima_surprised_style1.png',
-                '/heart_at_crossroads/assets/characters/dima/dima_thoughtful_style1.png',
-                '/heart_at_crossroads/assets/characters/dima/dima_worry_style1.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_happy_style1.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_messenger_ava.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_neutral_style1.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_sad_style1.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_smile_style1.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_surprised_style1.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_thoughtful_style1.png',
-                '/heart_at_crossroads/assets/characters/lyosha/lyosha_worry_style1.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_happy_style1.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_messenger_ava.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_neutral_style1.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_sad_style1.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_smile_style1.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_surprised_style1.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_thoughtful_style1.png',
-                '/heart_at_crossroads/assets/characters/mark/mark_worry_style1.png',
-                '/heart_at_crossroads/assets/characters/sergey/sergey_happy_style1.png',
-                '/heart_at_crossroads/assets/characters/sergey/sergey_neutral_style1.png',
-                '/heart_at_crossroads/assets/characters/sergey/sergey_sad_style1.png',
-                '/heart_at_crossroads/assets/characters/sergey/sergey_smile_style1.png',
-                '/heart_at_crossroads/assets/characters/sergey/sergey_surprised_style1.png',
-                '/heart_at_crossroads/assets/characters/sergey/sergey_thoughtful_style1.png',
-                '/heart_at_crossroads/assets/characters/sergey/sergey_worry_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_confident_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_happy_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_happy_style1_summer.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_neutral_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_sad_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_sad_style1_summer.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_smile_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_surprised_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_thoughtful_style1.png',
-                '/heart_at_crossroads/assets/characters/vika/vika_worry_style1.png'
+                'assets/backgrounds/start_screen.png',
+                'assets/backgrounds/bg_apartment_morning.png',
+                'assets/backgrounds/bg_coffee_shop.png',
+                'assets/backgrounds/bg_phone_messenger.png',
+                'assets/backgrounds/bg_street_day_trash.png',
+                'assets/backgrounds/bg_street_dusk_end.png',
+                'assets/backgrounds/bg_street_night.png',
+                'assets/backgrounds/bg_webstudio_day.png',
+                'assets/backgrounds/bg_webstudio_night.png',
+                'assets/characters/anna/anna_angry_style1.png',
+                'assets/characters/anna/anna_happy_style1.png',
+                'assets/characters/anna/anna_happy_style2.png',
+                'assets/characters/anna/anna_neutral_style1.png',
+                'assets/characters/anna/anna_neutral_style1_summer.png',
+                'assets/characters/anna/anna_neutral_style2.png',
+                'assets/characters/anna/anna_neutral_style3.png',
+                'assets/characters/anna/anna_sad_style1.png',
+                'assets/characters/anna/anna_sad_style2.png',
+                'assets/characters/anna/anna_smile_style1.png',
+                'assets/characters/anna/anna_smile_style1_summer.png',
+                'assets/characters/anna/anna_smile_style2.png',
+                'assets/characters/anna/anna_smile_style2_summer.png',
+                'assets/characters/anna/anna_style2.png',
+                'assets/characters/anna/anna_surprised_style1.png',
+                'assets/characters/anna/anna_surprised_style2.png',
+                'assets/characters/anna/anna_thoughtful_style1.png',
+                'assets/characters/anna/anna_thoughtful_style1_summer.png',
+                'assets/characters/anna/anna_thoughtful_style2.png',
+                'assets/characters/anna/anna_worry_style1.png',
+                'assets/characters/anna/anna_worry_style2.png',
+                'assets/characters/dima/dima_happy_style1.png',
+                'assets/characters/dima/dima_neutral_style1.png',
+                'assets/characters/dima/dima_sad_style1.png',
+                'assets/characters/dima/dima_smile_style1.png',
+                'assets/characters/dima/dima_surprised_style1.png',
+                'assets/characters/dima/dima_thoughtful_style1.png',
+                'assets/characters/dima/dima_worry_style1.png',
+                'assets/characters/lyosha/lyosha_happy_style1.png',
+                'assets/characters/lyosha/lyosha_messenger_ava.png',
+                'assets/characters/lyosha/lyosha_neutral_style1.png',
+                'assets/characters/lyosha/lyosha_sad_style1.png',
+                'assets/characters/lyosha/lyosha_smile_style1.png',
+                'assets/characters/lyosha/lyosha_surprised_style1.png',
+                'assets/characters/lyosha/lyosha_thoughtful_style1.png',
+                'assets/characters/lyosha/lyosha_worry_style1.png',
+                'assets/characters/mark/mark_happy_style1.png',
+                'assets/characters/mark/mark_messenger_ava.png',
+                'assets/characters/mark/mark_neutral_style1.png',
+                'assets/characters/mark/mark_sad_style1.png',
+                'assets/characters/mark/mark_smile_style1.png',
+                'assets/characters/mark/mark_surprised_style1.png',
+                'assets/characters/mark/mark_thoughtful_style1.png',
+                'assets/characters/mark/mark_worry_style1.png',
+                'assets/characters/sergey/sergey_happy_style1.png',
+                'assets/characters/sergey/sergey_neutral_style1.png',
+                'assets/characters/sergey/sergey_sad_style1.png',
+                'assets/characters/sergey/sergey_smile_style1.png',
+                'assets/characters/sergey/sergey_surprised_style1.png',
+                'assets/characters/sergey/sergey_thoughtful_style1.png',
+                'assets/characters/sergey/sergey_worry_style1.png',
+                'assets/characters/vika/vika_confident_style1.png',
+                'assets/characters/vika/vika_happy_style1.png',
+                'assets/characters/vika/vika_happy_style1_summer.png',
+                'assets/characters/vika/vika_neutral_style1.png',
+                'assets/characters/vika/vika_sad_style1.png',
+                'assets/characters/vika/vika_sad_style1_summer.png',
+                'assets/characters/vika/vika_smile_style1.png',
+                'assets/characters/vika/vika_surprised_style1.png',
+                'assets/characters/vika/vika_thoughtful_style1.png',
+                'assets/characters/vika/vika_worry_style1.png'
             ];
             let loaded = 0;
             const totalImages = images.length;
@@ -1647,7 +1593,7 @@ function createDefaultOverlay(sceneId, sceneData = {}) {
 
         async function loadChapter(chapterId) {
     console.log(`Загрузка главы ${chapterId}`);
-    const jsonPath = `/heart_at_crossroads/assets/data/chapter${chapterId}.json`;
+    const jsonPath = `assets/data/chapter${chapterId}.json`;
     try {
         const response = await fetch(jsonPath, {
             headers: {
@@ -1733,7 +1679,7 @@ function updateProgress(sceneId, totalScenes) {
 // Настройка фона с проверкой
 async function setupBackground(newBackground, language) {
     console.log(`[setupBackground] Устанавливаем фон: ${newBackground}`);
-    const bgUrl = newBackground === 'none' ? 'none' : `/heart_at_crossroads/assets/backgrounds/${newBackground}.png`;
+    const bgUrl = newBackground === 'none' ? 'none' : `assets/backgrounds/${newBackground}.png`;
     if (bgUrl !== 'none') {
         const exists = await checkAssetExists(bgUrl);
         console.log(`[setupBackground] Проверка фона ${bgUrl}: ${exists ? 'найден' : 'не найден'}`);
@@ -1762,7 +1708,7 @@ async function setupCharacters(scene, language, stats) {
         const leftChar = scene.characterLeft.includes('${stats.appearance}')
             ? scene.characterLeft.replace('${stats.appearance}', stats.appearance)
             : scene.characterLeft;
-        const leftCharUrl = `/heart_at_crossroads/assets/characters/${leftChar.split('_')[0]}/${leftChar}.png`;
+        const leftCharUrl = `assets/characters/${leftChar.split('_')[0]}/${leftChar}.png`;
         const exists = await checkAssetExists(leftCharUrl);
         console.log(`[setupCharacters] Проверка персонажа ${leftCharUrl}: ${exists ? 'найден' : 'не найден'}`);
         if (!exists) {
@@ -1777,7 +1723,7 @@ async function setupCharacters(scene, language, stats) {
         const rightChar = scene.characterRight.includes('${stats.appearance}')
             ? scene.characterRight.replace('${stats.appearance}', stats.appearance)
             : scene.characterRight;
-        const rightCharUrl = `/heart_at_crossroads/assets/characters/${rightChar.split('_')[0]}/${rightChar}.png`;
+        const rightCharUrl = `assets/characters/${rightChar.split('_')[0]}/${rightChar}.png`;
         const exists = await checkAssetExists(rightCharUrl);
         console.log(`[setupCharacters] Проверка персонажа ${rightCharUrl}: ${exists ? 'найден' : 'не найден'}`);
         if (!exists) {
@@ -2154,7 +2100,7 @@ function clearDialogueHandlers(dialogueBox) {
         console.log('[applyScene] Применяем сцену с таймером');
 
         // Установка фона
-        const bgUrl = newBackground === 'none' ? 'none' : `/heart_at_crossroads/assets/backgrounds/${newBackground}.png`;
+        const bgUrl = newBackground === 'none' ? 'none' : `assets/backgrounds/${newBackground}.png`;
         if (bgUrl !== 'none' && !(await checkAssetExists(bgUrl))) {
             console.warn(`Фон ${newBackground}.png не найден`);
             showErrorMessage(stats.language === "ru" ? `Фон ${newBackground} не найден` : `Background ${newBackground} not found`);
@@ -2173,7 +2119,7 @@ function clearDialogueHandlers(dialogueBox) {
             const leftChar = scene.characterLeft.includes('${stats.appearance}') 
                 ? scene.characterLeft.replace('${stats.appearance}', stats.appearance)
                 : scene.characterLeft;
-            const leftCharUrl = `/heart_at_crossroads/assets/characters/${leftChar.split('_')[0]}/${leftChar}.png`;
+            const leftCharUrl = `assets/characters/${leftChar.split('_')[0]}/${leftChar}.png`;
             if (!(await checkAssetExists(leftCharUrl))) {
                 console.warn(`Персонаж ${leftChar}.png не найден`);
                 showErrorMessage(stats.language === "ru" ? `Персонаж ${leftChar} не найден` : `Character ${leftChar} not found`);
@@ -2185,7 +2131,7 @@ function clearDialogueHandlers(dialogueBox) {
             const rightChar = scene.characterRight.includes('${stats.appearance}') 
                 ? scene.characterRight.replace('${stats.appearance}', stats.appearance)
                 : scene.characterRight;
-            const rightCharUrl = `/heart_at_crossroads/assets/characters/${rightChar.split('_')[0]}/${rightChar}.png`;
+            const rightCharUrl = `assets/characters/${rightChar.split('_')[0]}/${rightChar}.png`;
             if (!(await checkAssetExists(rightCharUrl))) {
                 console.warn(`Персонаж ${rightChar}.png не найден`);
                 showErrorMessage(stats.language === "ru" ? `Персонаж ${rightChar} не найден` : `Character ${rightChar} not found`);
@@ -2273,7 +2219,7 @@ function clearDialogueHandlers(dialogueBox) {
             document.getElementById('game-container').appendChild(countdownElement);
 
             // Звук тикающего таймера
-            const tickSound = new Audio('/heart_at_crossroads/assets/sounds/sfx_tick.mp3');
+            const tickSound = new Audio('assets/sounds/sfx_tick.mp3');
             tickSound.loop = false;
             tickSound.play().catch(err => {
                 console.warn('Ошибка воспроизведения sfx_tick:', err);
@@ -2444,7 +2390,7 @@ function clearDialogueHandlers(dialogueBox) {
     galleryContainer.appendChild(closeButton);
 
     // Звуки
-    const clickSound = new Audio('/heart_at_crossroads/assets/sounds/sfx_camera_click.mp3');
+    const clickSound = new Audio('assets/sounds/sfx_camera_click.mp3');
     clickSound.load();
 
     // Анимация появления
@@ -2563,7 +2509,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
 
     if (isUnlocked) {
         const cardImg = document.createElement('img');
-        cardImg.src = `/heart_at_crossroads/assets/memories/${card.id}.png`;
+        cardImg.src = `assets/memories/${card.id}.png`;
         cardImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
         cardElement.appendChild(cardImg);
 
@@ -2578,14 +2524,14 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
         cardElement.appendChild(cardName);
     } else {
         const lockImg = document.createElement('img');
-        lockImg.src = '/heart_at_crossroads/assets/memories/card_locked.png';
+        lockImg.src = 'assets/memories/card_locked.png';
         lockImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
         cardElement.appendChild(lockImg);
 
         const unlockText = document.createElement('div');
         unlockText.className = 'unlock-text';
         unlockText.style.fontFamily = isRussian ? 'GoodVibesCyr, cursive' : 'GreatVibes, cursive';
-        const diamondIcon = `<img src="/heart_at_crossroads/assets/ui/diamonds.png" style="width: 16px; height: 16px; vertical-align: middle;">`;
+        const diamondIcon = `<img src="assets/ui/diamonds.png" style="width: 16px; height: 16px; vertical-align: middle;">`;
         unlockText.innerHTML = isRussian 
             ? `Разблокировка: ${card.unlock} ${diamondIcon}` 
             : `Unlock: ${card.unlockEn} ${diamondIcon}`;
@@ -2628,7 +2574,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
         cardElement.innerHTML = ''; // Очищаем содержимое
 
         const cardImg = document.createElement('img');
-        cardImg.src = `/heart_at_crossroads/assets/memories/${card.id}.png`;
+        cardImg.src = `assets/memories/${card.id}.png`;
         cardImg.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
         cardElement.appendChild(cardImg);
 
@@ -2643,7 +2589,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
         cardElement.appendChild(cardName);
 
         // Проигрываем звук разблокировки
-        const unlockSound = new Audio('/heart_at_crossroads/assets/sounds/sfx_card_unlock.mp3');
+        const unlockSound = new Audio('assets/sounds/sfx_card_unlock.mp3');
         unlockSound.play().catch(err => console.warn("Ошибка звука:", err));
         clickSound.play().catch(err => console.warn("Ошибка звука:", err));
     } else {
@@ -2667,7 +2613,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             <div style="font-size: 1.2rem; margin-bottom: 15px; font-family: ${isRussian ? 'GoodVibesCyr' : 'GreatVibes'}, cursive;">
                 ${isRussian ? card.name : card.nameEn}
             </div>
-            <img src="/heart_at_crossroads/assets/memories/${card.id}.png" alt="Card" style="width: 100%; border-radius: 5px; margin-bottom: 15px;">
+            <img src="assets/memories/${card.id}.png" alt="Card" style="width: 100%; border-radius: 5px; margin-bottom: 15px;">
             <button style="
                 background: linear-gradient(to bottom, #8C6F4A, #5A3F2A);
                 color: #F5E6C9; border: none; padding: 10px 20px; border-radius: 20px;
@@ -2705,7 +2651,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
         `;
 
         const img = document.createElement('img');
-        img.src = `/heart_at_crossroads/assets/memories/${card.id}.png`;
+        img.src = `assets/memories/${card.id}.png`;
         img.style.cssText = 'width: 100%; height: 100%; object-fit: cover;';
         detailContainer.appendChild(img);
 
@@ -2720,7 +2666,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
 
         addEventListeners(detailContainer, ['click', 'touchstart'], () => {
             document.body.removeChild(detailContainer);
-            document.getElementById('gallery-container').style.background = "url('/heart_at_crossroads/assets/images/shoebox_texture.png') center / cover no-repeat";
+            document.getElementById('gallery-container').style.background = "url('assets/images/shoebox_texture.png') center / cover no-repeat";
             clickSound.play().catch(err => console.warn("Ошибка звука:", err));
         });
     }
@@ -2774,7 +2720,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
                     const cardWrapper = document.createElement('div');
                     cardWrapper.style.cssText = 'display: inline-block; margin: 15px; position: relative;';
                     const img = document.createElement('img');
-                    img.src = `/heart_at_crossroads/assets/memories/${memory}.png`;
+                    img.src = `assets/memories/${memory}.png`;
                     img.style.cssText = 'display: block; max-width: 300px; border: 8px solid #e0c18e; border-radius: 5px;';
                     img.onerror = () => {
                         console.warn(`Воспоминание ${memory}.png не найдено`);
@@ -2815,7 +2761,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
        }
 
         async function loadFinals(endingId) {
-            const response = await fetch('/heart_at_crossroads/assets/data/finals.json');
+            const response = await fetch('assets/data/finals.json');
             const finalsData = await response.json();
            const normalizedEndingId = normalizeEndingId(endingId);
            const ending = finalsData.endings.find(e => e.id === normalizedEndingId);
@@ -2860,7 +2806,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             const dialogueElement = document.getElementById('dialogue-text');
             const speakerName = document.getElementById('speaker-name');
 
-            const bgUrl = `/heart_at_crossroads/assets/backgrounds/${scene.background}.png`;
+            const bgUrl = `assets/backgrounds/${scene.background}.png`;
             checkAssetExists(bgUrl).then(exists => {
                 if (!exists) {
                     console.warn(`Фон ${scene.background}.png не найден`);
@@ -2870,7 +2816,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             });
 
             if (scene.characterLeft) {
-                const leftCharUrl = `/heart_at_crossroads/assets/characters/${scene.characterLeft.split('_')[0]}/${scene.characterLeft}.png`;
+                const leftCharUrl = `assets/characters/${scene.characterLeft.split('_')[0]}/${scene.characterLeft}.png`;
                 checkAssetExists(leftCharUrl).then(exists => {
                     if (!exists) {
                         console.warn(`Персонаж ${scene.characterLeft}.png не найден`);
@@ -2881,7 +2827,7 @@ function createCardElement(card, seriesKey, cardsContainer, clickSound, isRussia
             } else charLeft.style.backgroundImage = 'none';
 
             if (scene.characterRight) {
-                const rightCharUrl = `/heart_at_crossroads/assets/characters/${scene.characterRight.split('_')[0]}/${scene.characterRight}.png`;
+                const rightCharUrl = `assets/characters/${scene.characterRight.split('_')[0]}/${scene.characterRight}.png`;
                 checkAssetExists(rightCharUrl).then(exists => {
                     if (!exists) {
                         console.warn(`Персонаж ${scene.characterRight}.png не найден`);
@@ -3117,9 +3063,9 @@ function fadeIn() {
 function showChoiceEffects(effects) {
     const feedback = document.createElement('img');
     feedback.className = 'choice-feedback';
-    if (effects.crown) feedback.src = '/heart_at_crossroads/assets/ui/crown.png';
-    else if (effects.heart) feedback.src = '/heart_at_crossroads/assets/ui/heart.png';
-    else if (effects.leaf) feedback.src = '/heart_at_crossroads/assets/ui/leaf.png';
+    if (effects.crown) feedback.src = 'assets/ui/crown.png';
+    else if (effects.heart) feedback.src = 'assets/ui/heart.png';
+    else if (effects.leaf) feedback.src = 'assets/ui/leaf.png';
     else return;
     document.getElementById('game-container').appendChild(feedback);
     setTimeout(() => feedback.remove(), 3000);
