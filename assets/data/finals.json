@@ -40,6 +40,20 @@
             "epilogue": {
                 "ru": "Анна и Дима растворились в пыли летних дорог, их жизнь — вихрь закатов и кадров, где каждый миг — последний. Его тёмная сторона рвала её сердце, но она бежала с ним, пока могла, зная: это её свобода, её разрыв.",
                 "en": "Anna and Dima vanished into the dust of summer roads, their life a whirlwind of sunsets and frames, every moment the last. His dark side tore at her heart, but she ran with him as long as she could, knowing: this was her freedom, her breaking point."
+            },
+            "requirements": {
+                "all": [
+                    {
+                        "stat": "heart",
+                        "op": ">=",
+                        "value": 15
+                    },
+                    {
+                        "relationship": "dima",
+                        "op": ">=",
+                        "value": 2
+                    }
+                ]
             }
         },
         {
@@ -78,6 +92,25 @@
             "epilogue": {
                 "ru": "Анна и Марк сбежали от ‘TrendWave’ в маленькую летнюю гавань, где кофе стал их спасением, а тишина — их криком. Его тайны остались позади, но каждый взгляд его глаз рвал её душу — это её покой, её вечный разрыв.",
                 "en": "Anna and Mark fled ‘TrendWave’ to a small summer haven, where coffee became their salvation and silence their scream. His secrets stayed behind, but every glance of his eyes tore her soul — this was her peace, her endless breaking."
+            },
+            "requirements": {
+                "all": [
+                    {
+                        "stat": "heart",
+                        "op": ">=",
+                        "value": 15
+                    },
+                    {
+                        "stat": "leaf",
+                        "op": ">=",
+                        "value": 10
+                    },
+                    {
+                        "relationship": "mark",
+                        "op": ">=",
+                        "value": 4
+                    }
+                ]
             }
         },
         {
@@ -115,6 +148,20 @@
             "epilogue": {
                 "ru": "Анна и Сергей вознесли ‘TrendWave’ к вершинам лета, но её сердце разбилось о холод его амбиций. Друзья ушли, любовь угасла, и она знала: это её триумф, её разрыв, её ледяная цена.",
                 "en": "Anna and Sergey raised ‘TrendWave’ to summer peaks, but her heart shattered against the cold of his ambition. Friends faded, love died, and she knew: this was her triumph, her breaking, her icy cost."
+            },
+            "requirements": {
+                "all": [
+                    {
+                        "stat": "crown",
+                        "op": ">=",
+                        "value": 6
+                    },
+                    {
+                        "relationship": "sergey",
+                        "op": ">=",
+                        "value": 3
+                    }
+                ]
             }
         },
         {
@@ -152,6 +199,47 @@
             "epilogue": {
                 "ru": "Анна ушла в летнюю ночь, оставив всё за спиной. Она искала себя в закатах, где ветер был её единственным спутником, и слёзы стали её правдой. Это её путь, её разрыв, её бесконечное лето.",
                 "en": "Anna stepped into the summer night, leaving everything behind. She sought herself in sunsets, where the wind was her only companion, and tears became her truth. This was her path, her breaking, her endless summer."
+            },
+            "requirements": {
+                "all": [
+                    {
+                        "stat": "crown",
+                        "op": ">=",
+                        "value": 5
+                    },
+                    {
+                        "compare": {
+                            "left": {
+                                "sum": [
+                                    {
+                                        "stat": "crown"
+                                    },
+                                    2
+                                ]
+                            },
+                            "op": ">=",
+                            "right": {
+                                "stat": "heart"
+                            }
+                        }
+                    },
+                    {
+                        "compare": {
+                            "left": {
+                                "sum": [
+                                    {
+                                        "stat": "crown"
+                                    },
+                                    2
+                                ]
+                            },
+                            "op": ">=",
+                            "right": {
+                                "stat": "leaf"
+                            }
+                        }
+                    }
+                ]
             }
         },
         {
@@ -189,6 +277,20 @@
             "epilogue": {
                 "ru": "Анна и Вика остались вместе, сшив разорванное лето нитями дружбы. Они пережили тени, но каждый взгляд Вики рвал Анну счастьем и болью. Это её дом, её разрыв, её вечное тепло.",
                 "en": "Anna and Vika stayed together, stitching torn summer with threads of friendship. They survived shadows, but every glance from Vika tore Anna with joy and pain. This was her home, her breaking, her eternal warmth."
+            },
+            "requirements": {
+                "all": [
+                    {
+                        "stat": "leaf",
+                        "op": ">=",
+                        "value": 15
+                    },
+                    {
+                        "relationship": "vika",
+                        "op": ">=",
+                        "value": 1
+                    }
+                ]
             }
         },
         {
@@ -228,7 +330,11 @@
             "epilogue": {
                 "ru": "Анна ушла в летний закат, оставив всё, что рвало её душу. Она выбрала время, чтобы собрать себя заново, и каждый шаг был болью и светом. Это её новый старт, её разрыв, её бесконечная дорога.",
                 "en": "Anna stepped into a summer sunset, leaving all that tore her soul. She chose time to piece herself anew, every step pain and light. This was her new start, her breaking, her endless road."
-            }
+            },
+            "requirements": {
+                "all": []
+            },
+            "fallback": true
         }
     ]
 }

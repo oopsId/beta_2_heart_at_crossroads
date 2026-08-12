@@ -140,7 +140,8 @@
                     "effects": {
                         "heart": 2,
                         "relationships.dima": 2
-                    }
+                    },
+                    "endingId": "freedom_with_dima"
                 },
                 {
                     "id": "mark",
@@ -153,7 +154,8 @@
                         "heart": 2,
                         "leaf": 1,
                         "relationships.mark": 2
-                    }
+                    },
+                    "endingId": "silence_with_mark"
                 },
                 {
                     "id": "sergey",
@@ -165,7 +167,8 @@
                     "effects": {
                         "crown": 2,
                         "relationships.sergey": 2
-                    }
+                    },
+                    "endingId": "summit_with_sergey"
                 },
                 {
                     "id": "vika",
@@ -177,7 +180,8 @@
                     "effects": {
                         "leaf": 2,
                         "relationships.vika": 2
-                    }
+                    },
+                    "endingId": "friendship_above_all"
                 },
                 {
                     "id": "alone",
@@ -188,21 +192,22 @@
                     "nextScene": 10,
                     "effects": {
                         "crown": 2
-                    }
+                    },
+                    "endingId": "lonely_path"
                 },
                 {
                     "id": "premium",
                     "text": {
-                        "ru": "Сказать: ‘Мне нужно время’ (20 бриллиантов)",
-                        "en": "Say: ‘I need time’ (20 diamonds)"
+                        "ru": "Сказать: ‘Мне нужно время’",
+                        "en": "Say: ‘I need time’"
                     },
                     "nextScene": 11,
-                    "cost": 20,
                     "effects": {
                         "crown": 1,
                         "heart": 1,
                         "leaf": 1
-                    }
+                    },
+                    "endingId": "new_start"
                 }
             ]
         },

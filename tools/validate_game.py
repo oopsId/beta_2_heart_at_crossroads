@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "assets" / "data"
 HTML_PATH = ROOT / "heart_at_crossroads.html"
 
-CANONICAL_RELATIONSHIPS = {"mark", "lera", "vika", "sergey", "anna", "dima", "lesha"}
+CANONICAL_RELATIONSHIPS = {"mark", "lera", "vika", "sergey", "anna", "dima", "lyosha"}
 PERSONALITY_STATS = {"crown", "heart", "leaf"}
 AUDIO_EXTS = {".mp3", ".wav", ".ogg", ".m4a"}
 VISUAL_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".svg"}

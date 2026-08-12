@@ -106,7 +106,10 @@
                         "en": "Alright, let's go"
                     },
                     "nextScene": 4,
-                    "effects": { "crown": 1, "relationships.vika": 1 }
+                    "effects": {
+                        "crown": 1,
+                        "relationships.vika": 1
+                    }
                 },
                 {
                     "id": "refuse",
@@ -115,7 +118,10 @@
                         "en": "No, I'll stay"
                     },
                     "nextScene": 5,
-                    "effects": { "heart": 1, "relationships.vika": -1 }
+                    "effects": {
+                        "heart": 1,
+                        "relationships.vika": -1
+                    }
                 },
                 {
                     "id": "premium",
@@ -125,7 +131,10 @@
                     },
                     "nextScene": 6,
                     "cost": 5,
-                    "effects": { "leaf": 1, "relationships.vika": 2 }
+                    "effects": {
+                        "leaf": 1,
+                        "relationships.vika": 2
+                    }
                 }
             ]
         },
@@ -257,7 +266,8 @@
             "timeout": {
                 "seconds": 10,
                 "choiceId": "ignore"
-            }
+            },
+            "phoneMode": "messenger"
         },
         {
             "id": 8,
@@ -380,7 +390,9 @@
                         "en": "Smile: 'No, I'm with a friend'"
                     },
                     "nextScene": 13,
-                    "effects": { "heart": 1 }
+                    "effects": {
+                        "heart": 1
+                    }
                 },
                 {
                     "id": "tease",
@@ -389,7 +401,10 @@
                         "en": "Say: 'Are you always this clumsy?'"
                     },
                     "nextScene": 14,
-                    "effects": { "crown": 1, "memoryTag": "mark_remembers_tease" }
+                    "effects": {
+                        "crown": 1
+                    },
+                    "memoryTag": "mark_remembers_tease"
                 },
                 {
                     "id": "leave",
@@ -398,7 +413,9 @@
                         "en": "Leave silently"
                     },
                     "nextScene": 15,
-                    "effects": { "leaf": 1 }
+                    "effects": {
+                        "leaf": 1
+                    }
                 }
             ]
         },
@@ -523,7 +540,10 @@
                         "en": "Nod: 'Nice to meet you'"
                     },
                     "nextScene": 18,
-                    "effects": { "crown": 1, "memoryTag": "sergey_remembers_polite" }
+                    "effects": {
+                        "crown": 1
+                    },
+                    "memoryTag": "sergey_remembers_polite"
                 },
                 {
                     "id": "honest",
@@ -532,7 +552,10 @@
                         "en": "Say: 'I'm here by chance, Vik'"
                     },
                     "nextScene": 19,
-                    "effects": { "leaf": 1, "memoryTag": "vika_remembers_honest" }
+                    "effects": {
+                        "leaf": 1
+                    },
+                    "memoryTag": "vika_remembers_honest"
                 },
                 {
                     "id": "premium",
@@ -542,7 +565,11 @@
                     },
                     "nextScene": 20,
                     "cost": 15,
-                    "effects": { "heart": 1, "relationships.vika": 1, "relationships.sergey": 1 }
+                    "effects": {
+                        "heart": 1,
+                        "relationships.vika": 1,
+                        "relationships.sergey": 1
+                    }
                 }
             ]
         },
@@ -644,9 +671,9 @@
                     },
                     "nextScene": 22,
                     "effects": {
-                        "heart": 1,
-                        "memoryTag": "mark_remembers_thanks"
-                    }
+                        "heart": 1
+                    },
+                    "memoryTag": "mark_remembers_thanks"
                 },
                 {
                     "id": "ignore",
@@ -673,7 +700,8 @@
             "timeout": {
                 "seconds": 10,
                 "choiceId": "ignore"
-            }
+            },
+            "phoneMode": "messenger"
         },
         {
             "id": 22,

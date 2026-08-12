@@ -224,7 +224,8 @@
             "timeout": {
                 "seconds": 10,
                 "choiceId": "ignore"
-            }
+            },
+            "phoneMode": "messenger"
         },
         {
             "id": 7,

@@ -89,7 +89,8 @@
                     "id": "no_reply",
                     "nextScene": 5
                 }
-            }
+            },
+            "phoneMode": "messenger"
         },
         {
             "id": 2,
@@ -289,9 +290,9 @@
                     },
                     "nextScene": 10,
                     "effects": {
-                        "heart": 1,
-                        "memoryTag": "dima_remembers_yes"
-                    }
+                        "heart": 1
+                    },
+                    "memoryTag": "dima_remembers_yes"
                 },
                 {
                     "id": "no",
@@ -301,9 +302,9 @@
                     },
                     "nextScene": 11,
                     "effects": {
-                        "leaf": 1,
-                        "memoryTag": "dima_remembers_no"
-                    }
+                        "leaf": 1
+                    },
+                    "memoryTag": "dima_remembers_no"
                 },
                 {
                     "id": "premium",

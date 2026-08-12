@@ -15,7 +15,9 @@ await page.waitForFunction(() =>
   typeof loadSession === 'function' &&
   typeof transitionTo === 'function' &&
   typeof applyTimeoutOutcome === 'function' &&
-  typeof resolveSceneTransition === 'function'
+  typeof resolveSceneTransition === 'function' &&
+  typeof stage0iEnsureFinals === 'function' &&
+  typeof stage0iEndingEligible === 'function'
 );
 await page.waitForTimeout(100);
 
@@ -196,15 +198,18 @@ result = await page.evaluate(async () => {
 assert(result.ok === false && result.chapter === 3 && result.scene === 2 && result.showCalls === 0, 'Failed chapter load did not fail closed', JSON.stringify(result));
 results.loadFailure = true;
 
-// 6. Chapter 10 terminal scene owns its ending; loadFinals resolves without transient pending state.
+// 6. Chapter 10 terminal scene owns its ending; eligibility is rechecked without transient pending state.
 result = await page.evaluate(async () => {
   const originalShowEnding = showEnding;
   let captured = null;
   try {
-    const generation = beginRuntimeSession('0h-ending');
+    const generation = beginRuntimeSession('0i-ending');
     resetGameState(false);
     currentChapter = 10;
     currentScene = 7;
+    stats.heart = 15;
+    stats.leaf = 10;
+    stats.relationships.mark = 4;
     scriptData = await (await fetch('assets/data/chapter10.json')).json();
     const terminal = scriptData.scenes.find(scene => scene.id === 7);
     const route = resolveSceneTransition(terminal);
@@ -220,15 +225,153 @@ result = await page.evaluate(async () => {
       captured,
       hasPendingGlobal: Object.prototype.hasOwnProperty.call(window, 'pendingEndingId')
     };
-    invalidateRuntimeSession('0h-ending-done');
+    invalidateRuntimeSession('0i-ending-done');
     return snapshot;
   } finally {
     showEnding = originalShowEnding;
   }
 });
 assert(result.route.type === 'ending' && result.route.endingId === 'silence_with_mark', 'Terminal ending ownership regression', JSON.stringify(result));
-assert(result.loaded === true && result.captured === 'silence_with_mark' && result.hasPendingGlobal === false, 'Ending load depends on transient context', JSON.stringify(result));
+assert(result.loaded === true && result.captured === 'silence_with_mark' && result.hasPendingGlobal === false, 'Eligible ending load depends on transient context', JSON.stringify(result));
 results.endings = true;
+
+// 7. Final options are gated before click and a locked route cannot be forced through applyChoice.
+result = await page.evaluate(async () => {
+  const generation = beginRuntimeSession('0i-eligibility');
+  resetGameState(false);
+  currentChapter = 10;
+  currentScene = 5;
+  scriptData = await (await fetch('assets/data/chapter10.json')).json();
+  const scene5 = scriptData.scenes.find(scene => scene.id === 5);
+  const box = document.querySelector('.dialogue-box');
+  clearDialogueHandlers(box);
+
+  stats.heart = 0;
+  stats.leaf = 0;
+  stats.crown = 0;
+  stats.relationships.dima = 0;
+  stats.relationships.mark = 0;
+  stats.relationships.sergey = 0;
+  stats.relationships.vika = 0;
+  await handleChoices(scene5, box, null, generation);
+  const lockedDima = box.querySelector('[data-choice-id="dima"]')?.disabled === true;
+  const lockedMark = box.querySelector('[data-choice-id="mark"]')?.disabled === true;
+  const fallbackButton = box.querySelector('[data-choice-id="premium"]');
+  const fallbackAvailable = fallbackButton?.disabled === false && fallbackButton?.dataset.eligible === 'true';
+  const forced = await applyChoice(scene5.choices.find(choice => choice.id === 'mark'), { generation });
+
+  clearDialogueHandlers(box);
+  stats.heart = 15;
+  stats.relationships.dima = 2;
+  await handleChoices(scene5, box, null, generation);
+  const dimaButton = box.querySelector('[data-choice-id="dima"]');
+  const unlockedDima = dimaButton?.disabled === false && dimaButton?.dataset.eligible === 'true';
+  const premium = scene5.choices.find(choice => choice.id === 'premium');
+
+  const snapshot = {
+    lockedDima,
+    lockedMark,
+    fallbackAvailable,
+    forced,
+    unlockedDima,
+    premiumHasCost: Object.prototype.hasOwnProperty.call(premium, 'cost'),
+    premiumText: premium.text.ru
+  };
+  invalidateRuntimeSession('0i-eligibility-done');
+  return snapshot;
+});
+assert(result.lockedDima && result.lockedMark && result.forced === false, 'Locked final route can be selected before eligibility', JSON.stringify(result));
+assert(result.fallbackAvailable, 'Reachable final state can have every ending locked; New Start fallback must remain available', JSON.stringify(result));
+assert(result.unlockedDima, 'Reachable Dima gate did not unlock before click', JSON.stringify(result));
+assert(result.premiumHasCost === false && !result.premiumText.includes('20 бриллиантов'), 'Impossible 20-diamond final gate remains', JSON.stringify(result));
+results.eligibility = true;
+
+// 8. Stage 0E timed messenger scenes still render the phone overlay (chapter 2 / scene 1 regression).
+result = await page.evaluate(async () => {
+  const generation = beginRuntimeSession('0i-phone');
+  resetGameState(false);
+  currentChapter = 2;
+  currentScene = 1;
+  scriptData = await (await fetch('assets/data/chapter2.json')).json();
+  const scene = scriptData.scenes.find(candidate => candidate.id === 1);
+  const originalTypeText = typeText;
+  const originalPlaySound = playSound;
+  const originalPlayMusic = playMusic;
+  try {
+    currentBackground = scene.background;
+    typeText = (_text, _element, callback) => { callback?.(); return true; };
+    playSound = () => null;
+    playMusic = () => null;
+    showSceneWithTimer(scene, generation);
+    await new Promise(resolve => window.setTimeout(resolve, 250));
+    const overlay = document.getElementById('messenger-overlay');
+    const hrefs = overlay ? [...overlay.querySelectorAll('image')].map(image => image.getAttribute('href') || '') : [];
+    const snapshot = {
+      phoneMode: scene.phoneMode,
+      exists: Boolean(overlay),
+      text: overlay?.textContent || '',
+      hasAnnaAvatar: hrefs.some(href => href.includes('anna_messenger_ava.png'))
+    };
+    invalidateRuntimeSession('0i-phone-done');
+    return snapshot;
+  } finally {
+    typeText = originalTypeText;
+    playSound = originalPlaySound;
+    playMusic = originalPlayMusic;
+  }
+});
+assert(result.phoneMode === 'messenger' && result.exists, 'Timed messenger overlay disappeared after Stage 0E', JSON.stringify(result));
+assert((result.text.includes('Анна') || result.text.includes('Anna')) && result.hasAnnaAvatar, 'Chapter 2 messenger overlay lost Anna header/avatar', JSON.stringify(result));
+results.phoneOverlay = true;
+
+// 9. Speaker focus follows the actual displayed character instead of hard-coded Anna/Vika positions.
+result = await page.evaluate(async () => {
+  const generation = beginRuntimeSession('0i-speaker');
+  resetGameState(false);
+  currentChapter = 10;
+  scriptData = await (await fetch('assets/data/chapter10.json')).json();
+  const dimaScene = scriptData.scenes.find(scene => scene.id === 6);
+  const ok = await setupCharacters(dimaScene, 'ru', stats, generation);
+  const left = document.getElementById('character-left');
+  const right = document.getElementById('character-right');
+  const snapshot = {
+    ok,
+    leftSpeaker: left.classList.contains('character-speaker'),
+    leftNon: left.classList.contains('character-non-speaker'),
+    rightSpeaker: right.classList.contains('character-speaker'),
+    speakerName: document.getElementById('speaker-name').textContent
+  };
+  invalidateRuntimeSession('0i-speaker-done');
+  return snapshot;
+});
+assert(result.ok && result.rightSpeaker && result.leftNon && !result.leftSpeaker && result.speakerName === 'Дима', 'Speaker highlight does not follow Dima sprite', JSON.stringify(result));
+results.speakerFocus = true;
+
+// 10. VN typewriter: reveal current || part on one click, wait, then next click starts next part.
+result = await page.evaluate(async () => {
+  const generation = beginRuntimeSession('0i-typewriter');
+  resetGameState(false);
+  const box = document.querySelector('.dialogue-box');
+  const element = document.getElementById('dialogue-text');
+  box.style.pointerEvents = 'auto';
+  let callbacks = 0;
+  const started = typeText('FIRST||SECOND', element, () => { callbacks += 1; }, generation);
+
+  box.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  const afterRevealFirst = { text: element.textContent, callbacks, isTyping };
+
+  box.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  const afterStartSecond = { text: element.textContent, callbacks, isTyping };
+
+  box.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  const afterRevealSecond = { text: element.textContent, callbacks, isTyping };
+  invalidateRuntimeSession('0i-typewriter-done');
+  return { started, afterRevealFirst, afterStartSecond, afterRevealSecond };
+});
+assert(result.started && result.afterRevealFirst.text === 'FIRST' && result.afterRevealFirst.callbacks === 0 && result.afterRevealFirst.isTyping === false, 'First click did not reveal-and-pause current part', JSON.stringify(result));
+assert(result.afterStartSecond.text.length > 0 && result.afterStartSecond.text !== 'FIRST' && result.afterStartSecond.callbacks === 0, 'Second click did not start next part', JSON.stringify(result));
+assert(result.afterRevealSecond.text === 'SECOND' && result.afterRevealSecond.callbacks === 1 && result.afterRevealSecond.isTyping === false, 'Final part did not reveal and hand control to transition on next click', JSON.stringify(result));
+results.typewriter = true;
 
 console.log(JSON.stringify({ status: 'PASS', ...results }, null, 2));
 await browser.close();
