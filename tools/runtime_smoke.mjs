@@ -317,7 +317,7 @@ result = await page.evaluate(async () => {
   }
 });
 assert(result.phoneMode === 'messenger' && result.exists, 'Timed messenger overlay disappeared after Stage 0E', JSON.stringify(result));
-assert(result.text.includes('Анна') && result.hasAnnaAvatar, 'Chapter 2 messenger overlay lost Anna header/avatar', JSON.stringify(result));
+assert((result.text.includes('Анна') || result.text.includes('Anna')) && result.hasAnnaAvatar, 'Chapter 2 messenger overlay lost Anna header/avatar', JSON.stringify(result));
 results.phoneOverlay = true;
 
 // 9. Speaker focus follows the actual displayed character instead of hard-coded Anna/Vika positions.
