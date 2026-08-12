@@ -44,6 +44,9 @@ jobs:
       - name: Browser runtime audit
         run: node audit/browser_audit.mjs
 
+      - name: Deep transition checks
+        run: node audit/runtime_deep_checks.mjs
+
       - name: Server log
         if: always()
         run: cat /tmp/audit-http.log || true
