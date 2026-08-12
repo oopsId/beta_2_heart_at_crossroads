@@ -1,0 +1,36 @@
+name: Hotfix Sergey avatar
+
+on:
+  push:
+    branches:
+      - hotfix-sergey-messenger-avatar
+    paths:
+      - .github/workflows/hotfix-sergey-avatar.yml
+      - tools/hotfix_sergey_avatar.py
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix-sergey-messenger-avatar
+      - name: Apply hotfix
+        run: python3 tools/hotfix_sergey_avatar.py
+      - name: Verify avatar contract
+        run: python3 tools/validate_sergey_avatar.py
+      - name: Commit hotfix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/data/chapter2.json tools/validate_sergey_avatar.py
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Hotfix: add Sergey messenger avatar"
+          git push origin HEAD:hotfix-sergey-messenger-avatar
