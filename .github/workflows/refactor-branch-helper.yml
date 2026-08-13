@@ -1,0 +1,34 @@
+name: Refactor branch helper
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/refactor-branch-helper.yml
+
+permissions:
+  contents: write
+
+jobs:
+  stage1b:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage-1b-core-js-extraction
+          fetch-depth: 0
+      - name: Extract core runtime
+        run: python3 tools/stage1b_extract.py
+      - name: Verify and push generated files
+        run: |
+          git -c core.whitespace=cr-at-eol diff --check
+          test -s assets/js/core-runtime.js
+          test $(wc -c < assets/js/core-runtime.js) -gt 50000
+          grep -q 'assets/js/core-runtime.js' heart_at_crossroads.html
+          ! grep -qE '<script[[:space:]]*>' heart_at_crossroads.html
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add heart_at_crossroads.html assets/js/core-runtime.js
+          git commit -m 'Stage 1B: extract core runtime JS'
+          git push origin HEAD:stage-1b-core-js-extraction
