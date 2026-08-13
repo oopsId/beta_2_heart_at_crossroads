@@ -4,11 +4,11 @@ from reachability import ENDING_PROJECTIONS, explore, load_chapters
 EXPECTED_CHOICES={'dima':'freedom_with_dima','mark':'silence_with_mark','sergey':'summit_with_sergey','vika':'friendship_above_all','alone':'lonely_path','premium':'new_start'}
 def level(e,s):
  if e=='freedom_with_dima': return 'strong' if s.get('dima',0)>=2 and s.get('heart',0)>=12 else ('mixed' if s.get('dima',0)>=1 or s.get('heart',0)>=10 else 'impulsive')
- if e=='silence_with_mark': return 'strong' if s.get('mark',0)>=3 and (s.get('heart',0)>=10 or s.get('leaf',0)>=8) else ('mixed' if s.get('mark',0)>=1 or s.get('heart',0)>=8 or s.get('leaf',0)>=6 else 'impulsive')
- if e=='summit_with_sergey': return 'strong' if s.get('sergey',0)>=2 and s.get('crown',0)>=4 else ('mixed' if s.get('sergey',0)>=1 or s.get('crown',0)>=3 else 'impulsive')
+ if e=='silence_with_mark': return 'strong' if s.get('mark',0)>=4 and s.get('heart',0)>=12 and s.get('leaf',0)>=8 else ('mixed' if s.get('mark',0)>=2 or s.get('heart',0)>=10 or s.get('leaf',0)>=8 else 'impulsive')
+ if e=='summit_with_sergey': return 'strong' if s.get('sergey',0)>=3 and s.get('crown',0)>=5 else ('mixed' if s.get('sergey',0)>=1 or s.get('crown',0)>=3 else 'impulsive')
  if e=='friendship_above_all': return 'strong' if s.get('vika',0)>=1 and s.get('leaf',0)>=10 else ('mixed' if s.get('vika',0)>=0 or s.get('leaf',0)>=7 else 'impulsive')
  if e=='lonely_path':
-  c,h,l=s.get('crown',0),s.get('heart',0),s.get('leaf',0);return 'strong' if c>=5 and c+3>=h and c+3>=l else ('mixed' if c>=4 else 'impulsive')
+  c,h,l=s.get('crown',0),s.get('heart',0),s.get('leaf',0);return 'strong' if c>=4 and c+4>=h and c+4>=l else ('mixed' if c>=3 else 'impulsive')
  if e=='new_start': return 'intentional'
  raise ValueError(e)
 def main():
