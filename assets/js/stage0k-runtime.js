@@ -200,3 +200,5 @@
         };
     }
 })();
+
+// Stage 0M gallery/test-economy extension is appended below in this static runtime layer.
