@@ -22,7 +22,7 @@ jobs:
         run: python3 tools/stage1a_extract.py
       - name: Verify and push generated files
         run: |
-          git diff --check
+          git -c core.whitespace=cr-at-eol diff --check
           test -s assets/css/game.css
           grep -q 'assets/css/game.css' heart_at_crossroads.html
           ! grep -q '<style>' heart_at_crossroads.html
