@@ -83,7 +83,44 @@
                 "seconds": 10,
                 "choiceId": "ignore"
             },
-            "phoneMode": "messenger"
+            "phoneMode": "compose",
+            "phoneOverlay": {
+                "header": {
+                    "ru": "Анна",
+                    "en": "Anna"
+                },
+                "avatar": "assets/characters/anna/anna_messenger_ava.png",
+                "inputPlaceholder": {
+                    "ru": "Сообщение",
+                    "en": "Message"
+                },
+                "notifications": [
+                    {
+                        "senderId": "mark",
+                        "sender": {
+                            "ru": "Марк",
+                            "en": "Mark"
+                        },
+                        "message": {
+                            "ru": "Ты как?",
+                            "en": "You okay?"
+                        },
+                        "avatar": "assets/characters/mark/mark_messenger_ava.png"
+                    },
+                    {
+                        "senderId": "sergey",
+                        "sender": {
+                            "ru": "Сергей",
+                            "en": "Sergey"
+                        },
+                        "message": {
+                            "ru": "Жду в офисе сегодня.",
+                            "en": "Waiting at the office today."
+                        },
+                        "avatar": "assets/characters/sergey/sergey_messenger_ava.png"
+                    }
+                ]
+            }
         },
         {
             "id": 2,
@@ -335,7 +372,32 @@
                 "seconds": 10,
                 "choiceId": "ignore"
             },
-            "phoneMode": "messenger"
+            "phoneMode": "compose",
+            "phoneOverlay": {
+                "header": {
+                    "ru": "Анна",
+                    "en": "Anna"
+                },
+                "avatar": "assets/characters/anna/anna_messenger_ava.png",
+                "inputPlaceholder": {
+                    "ru": "Сообщение",
+                    "en": "Message"
+                },
+                "notifications": [
+                    {
+                        "senderId": "mark",
+                        "sender": {
+                            "ru": "Марк",
+                            "en": "Mark"
+                        },
+                        "message": {
+                            "ru": "Ты как после вчера?",
+                            "en": "How are you after yesterday?"
+                        },
+                        "avatar": "assets/characters/mark/mark_messenger_ava.png"
+                    }
+                ]
+            }
         },
         {
             "id": 11,
