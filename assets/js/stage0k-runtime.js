@@ -1,6 +1,7 @@
 // Stage 0P/0Q bootstrap: preserve staged runtime layers and load UI hotfixes.
 if (document.readyState === 'loading') {
     document.write('<link rel="stylesheet" href="assets/hud-hotfix.css">');
+    document.write('<link rel="stylesheet" href="assets/phone-compact.css">');
     document.write('<script src="assets/js/stage0k-runtime-base.js"><\/script>');
     document.write('<script src="assets/js/stage0n-gallery.js"><\/script>');
     document.write('<script src="assets/js/stage0p-gallery-polish.js"><\/script>');
@@ -10,6 +11,11 @@ if (document.readyState === 'loading') {
     hudStyle.rel = 'stylesheet';
     hudStyle.href = 'assets/hud-hotfix.css';
     document.head.appendChild(hudStyle);
+
+    const compactStyle = document.createElement('link');
+    compactStyle.rel = 'stylesheet';
+    compactStyle.href = 'assets/phone-compact.css';
+    document.head.appendChild(compactStyle);
 
     const base = document.createElement('script');
     base.src = 'assets/js/stage0k-runtime-base.js';
