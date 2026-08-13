@@ -415,6 +415,16 @@ def validate_runtime_html() -> None:
         error("HTML_READ", "heart_at_crossroads.html", str(exc))
         return
 
+    core_path = ROOT / "assets" / "js" / "core-runtime.js"
+    if "assets/js/core-runtime.js" not in html:
+        error("RUNTIME_INVARIANT", "heart_at_crossroads.html", "external core runtime include is missing")
+    try:
+        core_runtime = core_path.read_text(encoding="utf-8")
+    except Exception as exc:
+        error("RUNTIME_READ", "assets/js/core-runtime.js", str(exc))
+        core_runtime = ""
+    runtime_source = html + "\n" + core_runtime
+
     forbidden = {
         "/heart_at_crossroads/": "beta_2 must not request the original repo namespace",
         "telegram-web-app.js": "Telegram runtime must remain removed",
@@ -425,7 +435,7 @@ def validate_runtime_html() -> None:
         "last_session": "legacy save key must remain removed",
     }
     for needle, message in forbidden.items():
-        if needle in html:
+        if needle in runtime_source:
             error("RUNTIME_REGRESSION", "heart_at_crossroads.html", f"{message}: found {needle!r}")
 
     required = [
@@ -441,17 +451,17 @@ def validate_runtime_html() -> None:
         "function isRunCurrent(",
     ]
     for needle in required:
-        if needle not in html:
+        if needle not in runtime_source:
             error("RUNTIME_INVARIANT", "heart_at_crossroads.html", f"missing required stabilized runtime marker {needle!r}")
 
-    if "find(c => c.id === 'ignore')" in html or 'find(c => c.id === "ignore")' in html:
+    if "find(c => c.id === 'ignore')" in runtime_source or 'find(c => c.id === "ignore")' in runtime_source:
         error("TIMEOUT_MAGIC", "heart_at_crossroads.html", "hard-coded ignore timeout fallback returned")
-    if re.search(r"function\s+checkRequirements\s*\(", html):
+    if re.search(r"function\s+checkRequirements\s*\(", runtime_source):
         error("ENDING_REGRESSION", "heart_at_crossroads.html", "obsolete post-selection ending rejection gate returned")
 
     # Literal assets in runtime code: visual misses are hard failures; audio debt stays warnings.
     asset_re = re.compile(r"assets/[A-Za-z0-9_./-]+\.(?:png|jpg|jpeg|webp|svg|mp3|wav|ogg|m4a)", re.I)
-    for ref in sorted(set(asset_re.findall(html))):
+    for ref in sorted(set(asset_re.findall(runtime_source))):
         path = ROOT / ref
         if path.exists():
             continue
