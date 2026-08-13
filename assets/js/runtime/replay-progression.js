@@ -26,10 +26,10 @@
 (() => {
     const profiles={
         freedom_with_dima:{strong:s=>s.relationships.dima>=2&&s.heart>=12,mixed:s=>s.relationships.dima>=1||s.heart>=10},
-        silence_with_mark:{strong:s=>s.relationships.mark>=3&&(s.heart>=10||s.leaf>=8),mixed:s=>s.relationships.mark>=1||s.heart>=8||s.leaf>=6},
-        summit_with_sergey:{strong:s=>s.relationships.sergey>=2&&s.crown>=4,mixed:s=>s.relationships.sergey>=1||s.crown>=3},
+        silence_with_mark:{strong:s=>s.relationships.mark>=4&&s.heart>=12&&s.leaf>=8,mixed:s=>s.relationships.mark>=2||s.heart>=10||s.leaf>=8},
+        summit_with_sergey:{strong:s=>s.relationships.sergey>=3&&s.crown>=5,mixed:s=>s.relationships.sergey>=1||s.crown>=3},
         friendship_above_all:{strong:s=>s.relationships.vika>=1&&s.leaf>=10,mixed:s=>s.relationships.vika>=0||s.leaf>=7},
-        lonely_path:{strong:s=>s.crown>=5&&s.crown+3>=s.heart&&s.crown+3>=s.leaf,mixed:s=>s.crown>=4},
+        lonely_path:{strong:s=>s.crown>=4&&s.crown+4>=s.heart&&s.crown+4>=s.leaf,mixed:s=>s.crown>=3},
         new_start:{intentional:true}
     };
     function snapshot(source=stats){return{crown:Number(source?.crown)||0,heart:Number(source?.heart)||0,leaf:Number(source?.leaf)||0,relationships:{dima:Number(source?.relationships?.dima)||0,mark:Number(source?.relationships?.mark)||0,sergey:Number(source?.relationships?.sergey)||0,vika:Number(source?.relationships?.vika)||0}}}
