@@ -128,7 +128,7 @@ Continue обязан брать банк, а не старое число diamo
 Работает это только потому, что слои загружаются в нужном порядке. В целевой схеме такого быть не должно.
 
 Сюжетная покупка, подтверждённая в текущих данных:
-chapter1, scene 3, choice "new_start":
+chapter1, scene 3, choice "premium":
 - текст: «Что за студия? Расскажи!»
 - cost: 5
 - это дополнительная реплика/ветка, а не обязательный маршрут к финалу.
@@ -202,14 +202,14 @@ mixed: dima >= 1 ИЛИ heart >= 10
 MARK
 primary: relationships.mark
 secondary: heart + leaf
-strong: mark >= 3 И (heart >= 10 ИЛИ leaf >= 8)
-mixed: mark >= 1 ИЛИ heart >= 8 ИЛИ leaf >= 6
+strong: mark >= 4 И heart >= 12 И leaf >= 8
+mixed: mark >= 2 ИЛИ heart >= 10 ИЛИ leaf >= 8
 иначе: impulsive
 
 SERGEY
 primary: relationships.sergey
 secondary: crown
-strong: sergey >= 2 И crown >= 4
+strong: sergey >= 3 И crown >= 5
 mixed: sergey >= 1 ИЛИ crown >= 3
 иначе: impulsive
 
@@ -222,8 +222,8 @@ mixed: vika >= 0 ИЛИ leaf >= 7
 
 ALONE
 primary: самостоятельность, без relationship gate
-strong: crown >= 5 И crown + 3 >= heart И crown + 3 >= leaf
-mixed: crown >= 4
+strong: crown >= 4 И crown + 4 >= heart И crown + 4 >= leaf
+mixed: crown >= 3
 иначе: impulsive
 
 NEW START
@@ -291,7 +291,7 @@ completionCount >= 2:
 
 8. "available", "affordable" и "unlocked" должны быть разными состояниями.
 
-9. Финальный choice "Мне нужно время" переименовать технически с id "new_start" на смысловой id (например new_start/time), потому что он бесплатный и не является premium purchase.
+9. Финальный choice "Мне нужно время" переименовать технически с исторического id "premium" на "new_start", потому что он бесплатный и не является premium purchase.
 
 ============================================================
 5. ACCEPTANCE CRITERIA STAGE 2D
@@ -332,3 +332,34 @@ completionCount >= 2:
 - не возвращаем visible route locks.
 
 Этот файл является исходной точкой для реализации Stage 2D. Если реализация расходится с ним, сначала меняется этот документ и только потом код.
+
+
+============================================================
+7. РЕЗУЛЬТАТ РЕАЛИЗАЦИИ STAGE 2D
+============================================================
+
+Stage 2D реализован. Пользовательская доступность всех шести финальных выборов = 100%.
+Накопленные решения больше не блокируют концовку; они вычисляют скрытый routeStrength.
+
+Финальная калибровка strong по exact reachability-report:
+- Dima: 37.07%
+- Mark: 14.33%
+- Sergey: 42.16%
+- Vika: 17.71%
+- Alone: 9.95%
+- New Start: intentional 100%
+
+Экономика после реализации:
+- initial bank: 70
+- completion reward: +100 после завершения эпилога/completionCount
+- chapter1 optional paid dialogue: 5
+- gallery paid cards: 50 + 50 после первого completion, только ручная покупка
+- replay gallery cards: бесплатное ручное открытие после completionCount >= 2
+- persistent diamond bank является источником истины при Continue/reload
+- трата сохраняется в bank до сохранения run, поэтому старый run не может воскресить предыдущий баланс
+
+Техническая миграция финального выбора:
+- chapter10 New Start: id `new_start`, endingId `new_start`, без cost
+- chapter1 платная дополнительная реплика остаётся id `premium`, cost 5
+
+`legacyRequirements` из finals удалены. Executable `requirements` могут оставаться только как историческая/аналитическая база старого evaluator; пользовательский UI их больше не использует как замки.
