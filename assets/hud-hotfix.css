@@ -15,6 +15,14 @@
   flex: 0 0 auto;
 }
 
+#gallery-container.stage0n.ru .n-sub {
+  font-size: 0 !important;
+}
+#gallery-container.stage0n.ru .n-sub::before {
+  content: 'Прошлое остаётся навсегда';
+  font-family: GoodVibesCyr, cursive !important;
+  font-size: clamp(20px, 2vw, 29px) !important;
+}
 #gallery-container.stage0n .n-series {
   margin: 7px auto 0 !important;
   padding: 0 !important;
