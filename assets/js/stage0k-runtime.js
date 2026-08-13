@@ -200,3 +200,197 @@
         };
     }
 })();
+
+// Stage 0M: temporary beta balance and the original four-card gallery progression.
+(() => {
+    const TEST_STARTING_DIAMONDS = 70;
+    const baseCreateFreshRunStats = createFreshRunStats;
+    createFreshRunStats = function stage0mCreateFreshRunStats(...args) {
+        const fresh = baseCreateFreshRunStats(...args);
+        fresh.diamonds = TEST_STARTING_DIAMONDS;
+        return fresh;
+    };
+    // The first in-memory state was created before this late runtime layer loaded.
+    // Top it up too; Continue still overwrites it with the valid saved run balance.
+    if (!runtimeActive) {
+        stats.diamonds = TEST_STARTING_DIAMONDS;
+        updateDiamondsDisplay();
+    }
+
+    const cards = () => Array.isArray(cardSeries?.romance?.cards) ? cardSeries.romance.cards : [];
+    const ruleFor = card => {
+        const ru = String(card?.unlock ?? '').trim().toLowerCase();
+        const en = String(card?.unlockEn ?? '').trim().toLowerCase();
+        if (ru === 'второе прохождение' || en === 'second playthrough') return { type: 'completion', minCompletionCount: 2 };
+        const cost = Number(card?.unlock);
+        if (Number.isFinite(cost) && cost > 0) return { type: 'diamonds', cost, minCompletionCount: 1 };
+        return { type: 'unknown' };
+    };
+    const isUnlocked = card => Boolean(card?.id) && Array.isArray(stats.memories) && stats.memories.includes(card.id);
+
+    async function syncGalleryProgress() {
+        if (!Array.isArray(stats.memories)) stats.memories = [];
+        let changed = false;
+        for (const card of cards()) {
+            const rule = ruleFor(card);
+            if (rule.type === 'completion' && stats.completionCount >= rule.minCompletionCount && !stats.memories.includes(card.id)) {
+                stats.memories.push(card.id);
+                changed = true;
+            }
+        }
+        if (changed) {
+            stats.memories = [...new Set(stats.memories)];
+            await saveProfile();
+        }
+        return changed;
+    }
+
+    function canBuyGalleryCard(card) {
+        const rule = ruleFor(card);
+        if (isUnlocked(card)) return { ok: false, reason: 'already-unlocked', rule };
+        if (rule.type !== 'diamonds') return { ok: false, reason: 'not-purchasable', rule };
+        if (stats.completionCount < rule.minCompletionCount) return { ok: false, reason: 'first-playthrough-required', rule };
+        if (stats.diamonds < rule.cost) return { ok: false, reason: 'not-enough-diamonds', rule };
+        return { ok: true, reason: 'ok', rule };
+    }
+
+    async function purchaseGalleryCard(card) {
+        const state = canBuyGalleryCard(card);
+        if (!state.ok) return state;
+        stats.diamonds -= state.rule.cost;
+        if (!Array.isArray(stats.memories)) stats.memories = [];
+        stats.memories = [...new Set([...stats.memories, card.id])];
+        updateDiamondsDisplay();
+        // Ownership is profile metaprogression; the current test diamond balance remains run-local.
+        await saveProfile();
+        return { ok: true, reason: 'purchased', rule: state.rule, diamonds: stats.diamonds };
+    }
+
+    function updateSeriesTitle() {
+        const title = document.querySelector('#gallery-container .series-title');
+        if (!title) return;
+        const all = cards();
+        const count = all.filter(isUnlocked).length;
+        title.textContent = stats.language === 'ru' ? `Серия: Романтика ${count}/${all.length}` : `Series: Romance ${count}/${all.length}`;
+    }
+
+    function galleryNotice(message) {
+        document.getElementById('stage0m-gallery-notice')?.remove();
+        const element = document.createElement('div');
+        element.id = 'stage0m-gallery-notice';
+        element.textContent = message;
+        element.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:5000;padding:10px 16px;border-radius:12px;background:rgba(30,22,17,.92);color:#F5E6C9;font:16px/1.3 Arial,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.35)';
+        document.body.appendChild(element);
+        window.setTimeout(() => element.remove(), 2400);
+    }
+
+    function renderUnlockedCard(card, element, isRussian) {
+        element.classList.remove('locked');
+        element.innerHTML = '';
+        const image = document.createElement('img');
+        image.src = `assets/memories/${card.id}.png`;
+        image.alt = isRussian ? card.name : card.nameEn;
+        image.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        element.appendChild(image);
+        const shine = document.createElement('div');
+        shine.className = 'card-shine-effect';
+        element.appendChild(shine);
+        const name = document.createElement('div');
+        name.className = 'card-name';
+        name.style.fontFamily = isRussian ? 'GoodVibesCyr, cursive' : 'GreatVibes, cursive';
+        name.textContent = isRussian ? card.name : card.nameEn;
+        element.appendChild(name);
+    }
+
+    createCardElement = function stage0mCreateCardElement(card, _seriesKey, _cardsContainer, clickSound, isRussian) {
+        const element = document.createElement('div');
+        element.className = 'premium-card';
+        element.dataset.cardId = card.id;
+        if (isUnlocked(card)) {
+            renderUnlockedCard(card, element, isRussian);
+            return element;
+        }
+
+        element.classList.add('locked');
+        const lockedImage = document.createElement('img');
+        lockedImage.src = 'assets/memories/card_locked.png';
+        lockedImage.alt = '';
+        lockedImage.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        element.appendChild(lockedImage);
+
+        const info = document.createElement('div');
+        info.className = 'unlock-text';
+        info.style.fontFamily = isRussian ? 'GoodVibesCyr, cursive' : 'GreatVibes, cursive';
+        const rule = ruleFor(card);
+        if (rule.type === 'completion') {
+            info.textContent = isRussian ? 'Откроется после второго прохождения' : 'Unlocks after the second playthrough';
+            element.appendChild(info);
+            return element;
+        }
+        if (rule.type !== 'diamonds') {
+            info.textContent = isRussian ? 'Условие открытия неизвестно' : 'Unknown unlock condition';
+            element.appendChild(info);
+            return element;
+        }
+        if (stats.completionCount < 1) {
+            info.textContent = isRussian ? 'Покупка откроется после первого прохождения' : 'Purchase unlocks after the first playthrough';
+            element.appendChild(info);
+            return element;
+        }
+
+        info.textContent = isRussian ? `Цена: ${rule.cost} 💎` : `Price: ${rule.cost} 💎`;
+        element.appendChild(info);
+        const button = document.createElement('button');
+        button.className = 'card-unlock-button';
+        button.style.fontFamily = isRussian ? 'GoodVibesCyr, cursive' : 'GreatVibes, cursive';
+        button.textContent = isRussian ? `Открыть за ${rule.cost} 💎` : `Unlock for ${rule.cost} 💎`;
+        button.disabled = stats.diamonds < rule.cost;
+        let busy = false;
+        const handleUnlock = async event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (busy) return;
+            busy = true;
+            try {
+                const result = await purchaseGalleryCard(card);
+                if (!result.ok) {
+                    galleryNotice(result.reason === 'not-enough-diamonds'
+                        ? (isRussian ? 'Недостаточно бриллиантов' : 'Not enough diamonds')
+                        : (isRussian ? 'Карточка пока недоступна' : 'Card is not available yet'));
+                    return;
+                }
+                renderUnlockedCard(card, element, isRussian);
+                updateSeriesTitle();
+                if (typeof showUnlockNotification === 'function' && window.gsap) showUnlockNotification(card, isRussian);
+                new Audio('assets/sounds/sfx_card_unlock.mp3').play().catch(() => {});
+                const clickPromise = clickSound?.play?.();
+                clickPromise?.catch?.(() => {});
+            } finally {
+                busy = false;
+            }
+        };
+        // Stop the legacy parent touchstart handler before it can swallow the purchase click.
+        button.addEventListener('touchstart', handleUnlock, { passive: false });
+        button.addEventListener('click', handleUnlock);
+        element.appendChild(button);
+        return element;
+    };
+
+    const baseShowPremiumGallery = showPremiumGallery;
+    showPremiumGallery = async function stage0mShowPremiumGallery() {
+        await syncGalleryProgress();
+        baseShowPremiumGallery();
+        updateSeriesTitle();
+    };
+    const baseShowSimpleGallery = showSimpleGallery;
+    showSimpleGallery = async function stage0mShowSimpleGallery() {
+        await syncGalleryProgress();
+        return baseShowSimpleGallery();
+    };
+
+    window.stage0mTestStartingDiamonds = TEST_STARTING_DIAMONDS;
+    window.stage0mGalleryRule = ruleFor;
+    window.stage0mSyncGalleryProgress = syncGalleryProgress;
+    window.stage0mCanBuyGalleryCard = canBuyGalleryCard;
+    window.stage0mPurchaseGalleryCard = purchaseGalleryCard;
+})();
