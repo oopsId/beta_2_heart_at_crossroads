@@ -1,0 +1,33 @@
+name: Refactor branch helper
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/refactor-branch-helper.yml
+
+permissions:
+  contents: write
+
+jobs:
+  stage1a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage-1a-css-extraction
+          fetch-depth: 0
+      - name: Extract CSS on Stage 1A branch
+        run: python3 tools/stage1a_extract.py
+      - name: Verify and push generated files
+        run: |
+          git diff --check
+          test -s assets/css/game.css
+          grep -q 'assets/css/game.css' heart_at_crossroads.html
+          ! grep -q '<style>' heart_at_crossroads.html
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add heart_at_crossroads.html assets/css/game.css
+          git commit -m 'Stage 1A: extract monolith CSS'
+          git push origin HEAD:stage-1a-css-extraction
