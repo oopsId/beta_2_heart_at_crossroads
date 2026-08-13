@@ -415,15 +415,17 @@ def validate_runtime_html() -> None:
         error("HTML_READ", "heart_at_crossroads.html", str(exc))
         return
 
-    core_path = ROOT / "assets" / "js" / "core-runtime.js"
-    if "assets/js/core-runtime.js" not in html:
-        error("RUNTIME_INVARIANT", "heart_at_crossroads.html", "external core runtime include is missing")
-    try:
-        core_runtime = core_path.read_text(encoding="utf-8")
-    except Exception as exc:
-        error("RUNTIME_READ", "assets/js/core-runtime.js", str(exc))
-        core_runtime = ""
-    runtime_source = html + "\n" + core_runtime
+    script_refs = re.findall(r'<script[^>]+src=["\'](assets/js/[^"\']+\.js)["\']', html, re.I)
+    if not script_refs:
+        error("RUNTIME_INVARIANT", "heart_at_crossroads.html", "no local runtime scripts are included")
+    runtime_parts = [html]
+    for ref in script_refs:
+        path = ROOT / ref
+        try:
+            runtime_parts.append(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            error("RUNTIME_READ", ref, str(exc))
+    runtime_source = "\n".join(runtime_parts)
 
     forbidden = {
         "/heart_at_crossroads/": "beta_2 must not request the original repo namespace",
