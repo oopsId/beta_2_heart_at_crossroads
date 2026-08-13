@@ -267,7 +267,32 @@
                 "seconds": 10,
                 "choiceId": "ignore"
             },
-            "phoneMode": "messenger"
+            "phoneMode": "compose",
+            "phoneOverlay": {
+                "header": {
+                    "ru": "Анна",
+                    "en": "Anna"
+                },
+                "avatar": "assets/characters/anna/anna_messenger_ava.png",
+                "inputPlaceholder": {
+                    "ru": "Сообщение",
+                    "en": "Message"
+                },
+                "notifications": [
+                    {
+                        "senderId": "lyosha",
+                        "sender": {
+                            "ru": "Лёша",
+                            "en": "Lyosha"
+                        },
+                        "message": {
+                            "ru": "Тусим вечером, Дима будет. Приходи!",
+                            "en": "Party tonight, Dima will be there. Come!"
+                        },
+                        "avatar": "assets/characters/lyosha/lyosha_messenger_ava.png"
+                    }
+                ]
+            }
         },
         {
             "id": 8,
@@ -701,7 +726,32 @@
                 "seconds": 10,
                 "choiceId": "ignore"
             },
-            "phoneMode": "messenger"
+            "phoneMode": "compose",
+            "phoneOverlay": {
+                "header": {
+                    "ru": "Анна",
+                    "en": "Anna"
+                },
+                "avatar": "assets/characters/anna/anna_messenger_ava.png",
+                "inputPlaceholder": {
+                    "ru": "Сообщение",
+                    "en": "Message"
+                },
+                "notifications": [
+                    {
+                        "senderId": "mark",
+                        "sender": {
+                            "ru": "Марк",
+                            "en": "Mark"
+                        },
+                        "message": {
+                            "ru": "Ты красивая, когда теряешься.",
+                            "en": "You're beautiful when you're lost."
+                        },
+                        "avatar": "assets/characters/mark/mark_messenger_ava.png"
+                    }
+                ]
+            }
         },
         {
             "id": 22,

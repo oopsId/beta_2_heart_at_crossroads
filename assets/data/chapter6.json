@@ -225,7 +225,44 @@
                 "seconds": 10,
                 "choiceId": "ignore"
             },
-            "phoneMode": "messenger"
+            "phoneMode": "compose",
+            "phoneOverlay": {
+                "header": {
+                    "ru": "Анна",
+                    "en": "Anna"
+                },
+                "avatar": "assets/characters/anna/anna_messenger_ava.png",
+                "inputPlaceholder": {
+                    "ru": "Сообщение",
+                    "en": "Message"
+                },
+                "notifications": [
+                    {
+                        "senderId": "mark",
+                        "sender": {
+                            "ru": "Марк",
+                            "en": "Mark"
+                        },
+                        "message": {
+                            "ru": "Ты в офисе? Что-то странное творится.",
+                            "en": "You at the office? Something weird's going on."
+                        },
+                        "avatar": "assets/characters/mark/mark_messenger_ava.png"
+                    },
+                    {
+                        "senderId": "dima",
+                        "sender": {
+                            "ru": "Дима",
+                            "en": "Dima"
+                        },
+                        "message": {
+                            "ru": "Вечеринка сегодня, приходи!",
+                            "en": "Party tonight, come!"
+                        },
+                        "avatar": "assets/characters/dima/dima_messenger_ava.png"
+                    }
+                ]
+            }
         },
         {
             "id": 7,

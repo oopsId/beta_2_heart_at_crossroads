@@ -337,6 +337,45 @@ assert(!result.text.includes('Пальцы замерли') && !result.text.incl
 assert(!result.dialogue.includes('Катя в WhatsApp'), 'Scene narration still contains stale Katya branch that is not selectable', JSON.stringify(result));
 results.phoneOverlay = true;
 
+// 8a. All timed phone scenes use real-avatar compose overlays; legacy messenger renderer is forbidden here.
+result = await page.evaluate(async () => {
+  const chapters = await Promise.all([1, 2, 3, 6].map(async chapter => await (await fetch(`assets/data/chapter${chapter}.json`)).json()));
+  const legacyTimed = [];
+  for (const chapter of chapters) {
+    for (const scene of chapter.scenes) {
+      if (scene.timeout && scene.phoneMode === 'messenger') legacyTimed.push(`${chapter.chapter}/${scene.id}`);
+    }
+  }
+
+  const generation = beginRuntimeSession('0l-phone-avatars');
+  resetGameState(false);
+  currentChapter = 6;
+  scriptData = chapters.find(chapter => chapter.chapter === 6);
+  const scene = scriptData.scenes.find(candidate => candidate.id === 6);
+  const overlay = stage0jShowComposeOverlay(scene, generation);
+  await new Promise(resolve => window.setTimeout(resolve, 80));
+  const notifications = overlay ? [...overlay.querySelectorAll('.stage0j-notification')] : [];
+  const imageSources = overlay ? [...overlay.querySelectorAll('.stage0j-notification-avatar')].map(image => image.getAttribute('src') || '') : [];
+  const fallbacks = overlay ? overlay.querySelectorAll('.stage0j-notification-initial').length : -1;
+  const dimaDecoded = await stage0jDecodeImage('assets/characters/dima/dima_messenger_ava.png');
+  const snapshot = {
+    legacyTimed,
+    phoneMode: scene.phoneMode,
+    senders: notifications.map(node => node.dataset.senderId),
+    imageSources,
+    fallbacks,
+    dimaDecoded
+  };
+  overlay?.remove();
+  invalidateRuntimeSession('0l-phone-avatars-done');
+  return snapshot;
+});
+assert(result.legacyTimed.length === 0, 'Timed scene still uses legacy messenger overlay', JSON.stringify(result));
+assert(result.phoneMode === 'compose' && result.senders.join(',') === 'mark,dima', 'Chapter 6 scene 6 did not migrate to Mark+Dima compose notifications', JSON.stringify(result));
+assert(result.imageSources.some(src => src.includes('mark_messenger_ava.png')) && result.imageSources.some(src => src.includes('dima_messenger_ava.png')), 'Chapter 6 scene 6 is missing real Mark/Dima avatars', JSON.stringify(result));
+assert(result.fallbacks === 0 && result.dimaDecoded === true, 'Compose notification fell back to an initial or Dima avatar failed to decode', JSON.stringify(result));
+results.phoneAvatars = true;
+
 // 8b. Compose phone stays on-screen on desktop and never overlaps dialogue in short landscape.
 await page.setViewportSize({ width: 1920, height: 1080 });
 result = await page.evaluate(async () => {
