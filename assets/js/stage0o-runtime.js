@@ -10,34 +10,54 @@
             if (raw === null) return null;
             const value = Number(raw);
             return Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
-        } catch (_) {
-            return null;
-        }
+        } catch (_) { return null; }
+    }
+
+    function legacyRunBalance() {
+        try {
+            const raw = localStorage.getItem(storageKey(RUN_STORAGE_KEY));
+            if (!raw) return null;
+            const value = Number(JSON.parse(raw)?.stats?.diamonds);
+            return Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
+        } catch (_) { return null; }
     }
 
     function writeBank(value) {
         const normalized = Number.isFinite(Number(value)) && Number(value) >= 0 ? Math.floor(Number(value)) : INITIAL_DIAMONDS;
-        try {
-            localStorage.setItem(storageKey(BANK_KEY), String(normalized));
-        } catch (error) {
-            console.error('[Stage 0O] Failed to persist diamond bank:', error);
-        }
+        try { localStorage.setItem(storageKey(BANK_KEY), String(normalized)); }
+        catch (error) { console.error('[Stage 0O] Failed to persist diamond bank:', error); }
         return normalized;
     }
 
     const baseCreateFreshRunStats = createFreshRunStats;
     createFreshRunStats = function stage0oCreateFreshRunStats(...args) {
         const fresh = baseCreateFreshRunStats(...args);
-        fresh.diamonds = readBank() ?? INITIAL_DIAMONDS;
+        fresh.diamonds = readBank() ?? legacyRunBalance() ?? INITIAL_DIAMONDS;
         return fresh;
     };
 
-    const existingBank = readBank();
-    if (existingBank === null) writeBank(Number(stats.diamonds) || INITIAL_DIAMONDS);
-    else if (!runtimeActive) {
+    let existingBank = readBank();
+    if (existingBank === null) {
+        const current = Number(stats.diamonds);
+        const seed = legacyRunBalance() ?? (Number.isFinite(current) && current >= 0 ? Math.floor(current) : INITIAL_DIAMONDS);
+        existingBank = writeBank(seed);
+    }
+    if (!runtimeActive) {
         stats.diamonds = existingBank;
         updateDiamondsDisplay();
     }
+
+    const baseLoadSession = loadSession;
+    loadSession = async function stage0oLoadSession(...args) {
+        const ok = await baseLoadSession(...args);
+        if (!ok) return ok;
+        const bank = readBank();
+        if (bank !== null) {
+            stats.diamonds = bank;
+            updateDiamondsDisplay();
+        }
+        return ok;
+    };
 
     let pendingCompletion = null;
     const baseShowEpilogue = showEpilogue;
@@ -83,8 +103,27 @@
         @media (max-height: 520px) and (orientation: landscape) {
             body.stage0j-compose-scene {
                 --stage0o-phone-top: 2px;
-                --stage0o-phone-height: min(180px, 48vh);
+                --stage0o-phone-height: min(205px, 55vh);
                 --stage0o-phone-gap: 8px;
+            }
+            #phone-compose-overlay .stage0j-phone-header { height: 42px !important; padding: 0 7px !important; }
+            #phone-compose-overlay .stage0j-header-avatar { width: 24px !important; height: 24px !important; }
+            #phone-compose-overlay .stage0j-notification-stack {
+                top: 46px !important; bottom: 43px !important; left: 6px !important; right: 6px !important;
+                gap: 2px !important; overflow-y: auto !important; overscroll-behavior: contain;
+                scrollbar-width: none; pointer-events: auto;
+            }
+            #phone-compose-overlay .stage0j-notification-stack::-webkit-scrollbar { display: none; }
+            #phone-compose-overlay .stage0j-notification {
+                min-height: 30px !important; padding: 2px 4px !important;
+                grid-template-columns: 24px 1fr !important; gap: 4px !important; flex: 0 0 auto;
+            }
+            #phone-compose-overlay .stage0j-notification-avatar,
+            #phone-compose-overlay .stage0j-notification-initial { width: 24px !important; height: 24px !important; }
+            #phone-compose-overlay .stage0j-notification-copy strong { margin-bottom: 0 !important; font-size: 10px !important; }
+            #phone-compose-overlay .stage0j-notification-copy span { font-size: 10px !important; }
+            #phone-compose-overlay .stage0j-compose-input-wrap {
+                left: 6px !important; right: 6px !important; bottom: 6px !important; min-height: 30px !important;
             }
         }
     `;
