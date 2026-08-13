@@ -65,6 +65,9 @@ jobs:
           mkdir -p artifacts
           node tools/runtime_smoke.mjs | tee artifacts/runtime-smoke.json
           node tools/gallery_smoke.mjs | tee artifacts/gallery-smoke.json
+          node tools/stage0o_smoke.mjs | tee artifacts/stage0o-smoke.json
+          node tools/stage0o_continue_smoke.mjs
+          node tools/stage0o_landscape_smoke.mjs
 
       - name: Upload browser report
         if: always()
@@ -74,6 +77,7 @@ jobs:
           path: |
             artifacts/runtime-smoke.json
             artifacts/gallery-smoke.json
+            artifacts/stage0o-smoke.json
           if-no-files-found: ignore
 
       - name: Server log on failure
