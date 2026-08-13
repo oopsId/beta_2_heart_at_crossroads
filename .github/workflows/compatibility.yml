@@ -1,0 +1,47 @@
+name: Browser compatibility
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: compatibility-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    name: Compatibility (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Start server
+        run: |
+          python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/game-http.log 2>&1 &
+          sleep 1
+          curl --fail --silent --show-error http://127.0.0.1:8000/heart_at_crossroads.html >/dev/null
+      - name: Run compatibility smoke
+        run: |
+          set -o pipefail
+          mkdir -p artifacts
+          BROWSER=${{ matrix.browser }} node tools/compat_smoke.mjs | tee artifacts/compat-${{ matrix.browser }}.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compat-${{ matrix.browser }}
+          path: artifacts/compat-${{ matrix.browser }}.json
+          if-no-files-found: ignore
+      - if: failure()
+        run: cat /tmp/game-http.log || true
