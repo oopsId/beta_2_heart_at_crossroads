@@ -23,9 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate chapters, routes, assets and runtime invariants
+      - name: Validate architecture, chapters, routes, assets and runtime invariants
         run: |
           mkdir -p artifacts
+          python3 tools/validate_architecture.py | tee artifacts/architecture-validation.txt
           python3 tools/validate_game.py --report artifacts/structural-validation.json
           python3 tools/validate_eligibility.py | tee artifacts/eligibility-validation.json
 
@@ -34,7 +35,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: structural-validation
-          path: artifacts/structural-validation.json
+          path: |
+            artifacts/architecture-validation.txt
+            artifacts/structural-validation.json
+            artifacts/eligibility-validation.json
           if-no-files-found: ignore
 
   browser:
