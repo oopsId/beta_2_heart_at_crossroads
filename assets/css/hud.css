@@ -67,3 +67,6 @@ html body.stage0j-compose-scene #game-container .dialogue-box {
     bottom: 58px !important;
   }
 }
+
+#stage0k-dev-replay-control{position:fixed;left:12px;bottom:10px;z-index:5005;display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:8px;background:rgba(20,20,20,.68);color:#fff;font:12px/1.2 Arial,sans-serif;pointer-events:auto;user-select:none}
+#stage0k-dev-replay-control input{margin:0}

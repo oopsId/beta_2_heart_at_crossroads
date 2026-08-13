@@ -1,30 +1,30 @@
 /* Phone layout owns phone geometry; the authored VN dialogue strip remains in hud.css. */
 html body.stage0j-compose-scene {
-  --stage0o-phone-top: 4px;
-  --stage0o-phone-height: min(430px, calc(80vh - 166px));
-  --stage0o-phone-gap: 12px;
+  --phone-overlay-top: 4px;
+  --phone-overlay-height: min(430px, calc(80vh - 166px));
+  --phone-overlay-gap: 12px;
 }
 html body.stage0j-compose-scene #phone-compose-overlay {
-  top: var(--stage0o-phone-top) !important;
-  height: var(--stage0o-phone-height) !important;
+  top: var(--phone-overlay-top) !important;
+  height: var(--phone-overlay-height) !important;
 }
 @media (max-width: 800px) {
   html body.stage0j-compose-scene {
-    --stage0o-phone-top: 4px;
-    --stage0o-phone-height: min(350px, 48vh, calc(80vh - 164px));
-    --stage0o-phone-gap: 10px;
+    --phone-overlay-top: 4px;
+    --phone-overlay-height: min(350px, 48vh, calc(80vh - 164px));
+    --phone-overlay-gap: 10px;
   }
 }
 @media (max-height: 760px) {
   html body.stage0j-compose-scene {
-    --stage0o-phone-height: min(300px, 36vh) !important;
+    --phone-overlay-height: min(300px, 36vh) !important;
   }
 }
 @media (max-height: 520px) and (orientation: landscape) {
   html body.stage0j-compose-scene {
-    --stage0o-phone-top: 2px !important;
-    --stage0o-phone-height: 140px !important;
-    --stage0o-phone-gap: 8px !important;
+    --phone-overlay-top: 2px !important;
+    --phone-overlay-height: 140px !important;
+    --phone-overlay-gap: 8px !important;
   }
   html body.stage0j-compose-scene #phone-compose-overlay .stage0j-phone-header { height:32px!important; padding:0 5px!important; }
   html body.stage0j-compose-scene #phone-compose-overlay .stage0j-header-avatar { width:20px!important; height:20px!important; }
@@ -37,3 +37,8 @@ html body.stage0j-compose-scene #phone-compose-overlay {
   html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-copy span { font-size:9px!important; line-height:1.05!important; }
   html body.stage0j-compose-scene #phone-compose-overlay .stage0j-compose-input-wrap { left:4px!important; right:4px!important; bottom:4px!important; min-height:24px!important; }
 }
+
+html body.stage0j-compose-scene #phone-compose-overlay{left:50%!important;transform:translateX(-50%)!important;width:clamp(260px,18vw,320px)!important;min-width:0!important;min-height:0!important;max-height:none!important}
+#phone-compose-overlay .stage0j-phone-screen{background:#dcebd5 url('../backgrounds/bg_phone_ui.png') center/cover no-repeat!important}
+@media(max-width:800px){html body.stage0j-compose-scene #phone-compose-overlay{width:clamp(190px,48vw,240px)!important}}
+@media(max-height:520px) and (orientation:landscape){html body.stage0j-compose-scene #phone-compose-overlay{width:min(150px,24vw)!important}}

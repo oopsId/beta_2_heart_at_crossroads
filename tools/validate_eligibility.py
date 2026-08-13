@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json
 from reachability import ENDING_PROJECTIONS, explore, load_chapters
-EXPECTED_CHOICES={'dima':'freedom_with_dima','mark':'silence_with_mark','sergey':'summit_with_sergey','vika':'friendship_above_all','alone':'lonely_path','premium':'new_start'}
+EXPECTED_CHOICES={'dima':'freedom_with_dima','mark':'silence_with_mark','sergey':'summit_with_sergey','vika':'friendship_above_all','alone':'lonely_path','new_start':'new_start'}
 def level(e,s):
  if e=='freedom_with_dima': return 'strong' if s.get('dima',0)>=2 and s.get('heart',0)>=12 else ('mixed' if s.get('dima',0)>=1 or s.get('heart',0)>=10 else 'impulsive')
  if e=='silence_with_mark': return 'strong' if s.get('mark',0)>=4 and s.get('heart',0)>=12 and s.get('leaf',0)>=8 else ('mixed' if s.get('mark',0)>=2 or s.get('heart',0)>=10 or s.get('leaf',0)>=8 else 'impulsive')
@@ -18,7 +18,7 @@ def main():
  for cid,eid in EXPECTED_CHOICES.items():
   if not choices.get(cid) or choices[cid].get('endingId')!=eid: raise SystemExit(f'bad final mapping: {cid}->{eid}')
  if len({c.get('endingId') for c in choices.values() if c.get('endingId')})!=6: raise SystemExit('final choice mapping must contain six unique endings')
- if 'cost' in choices['premium']: raise SystemExit('new_start must remain free')
+ if 'cost' in choices['new_start']: raise SystemExit('new_start must remain free')
  report={}
  for ending,(stats,rels) in ENDING_PROJECTIONS.items():
   _,rows=explore(chapters,stats,rels);cols=list(stats)+list(rels);counts={}
