@@ -239,56 +239,7 @@ assert(result.route.type === 'ending' && result.route.endingId === 'silence_with
 assert(result.loaded === true && result.captured === 'silence_with_mark' && result.hasPendingGlobal === false, 'Eligible ending load depends on transient context', JSON.stringify(result));
 results.endings = true;
 
-// 7. Final options are gated before click and a locked route cannot be forced through applyChoice.
-result = await page.evaluate(async () => {
-  const generation = beginRuntimeSession('0i-eligibility');
-  resetGameState(false);
-  currentChapter = 10;
-  currentScene = 5;
-  scriptData = await (await fetch('assets/data/chapter10.json')).json();
-  const scene5 = scriptData.scenes.find(scene => scene.id === 5);
-  const box = document.querySelector('.dialogue-box');
-  clearDialogueHandlers(box);
-
-  stats.heart = 0;
-  stats.leaf = 0;
-  stats.crown = 0;
-  stats.relationships.dima = 0;
-  stats.relationships.mark = 0;
-  stats.relationships.sergey = 0;
-  stats.relationships.vika = 0;
-  await handleChoices(scene5, box, null, generation);
-  const lockedDima = box.querySelector('[data-choice-id="dima"]')?.disabled === true;
-  const lockedMark = box.querySelector('[data-choice-id="mark"]')?.disabled === true;
-  const fallbackButton = box.querySelector('[data-choice-id="premium"]');
-  const fallbackAvailable = fallbackButton?.disabled === false && fallbackButton?.dataset.eligible === 'true';
-  const forced = await applyChoice(scene5.choices.find(choice => choice.id === 'mark'), { generation });
-
-  clearDialogueHandlers(box);
-  stats.heart = 15;
-  stats.relationships.dima = 2;
-  await handleChoices(scene5, box, null, generation);
-  const dimaButton = box.querySelector('[data-choice-id="dima"]');
-  const unlockedDima = dimaButton?.disabled === false && dimaButton?.dataset.eligible === 'true';
-  const premium = scene5.choices.find(choice => choice.id === 'premium');
-
-  const snapshot = {
-    lockedDima,
-    lockedMark,
-    fallbackAvailable,
-    forced,
-    unlockedDima,
-    premiumHasCost: Object.prototype.hasOwnProperty.call(premium, 'cost'),
-    premiumText: premium.text.ru
-  };
-  invalidateRuntimeSession('0i-eligibility-done');
-  return snapshot;
-});
-assert(result.lockedDima && result.lockedMark && result.forced === false, 'Locked final route can be selected before eligibility', JSON.stringify(result));
-assert(result.fallbackAvailable, 'Reachable final state can have every ending locked; New Start fallback must remain available', JSON.stringify(result));
-assert(result.unlockedDima, 'Reachable Dima gate did not unlock before click', JSON.stringify(result));
-assert(result.premiumHasCost === false && !result.premiumText.includes('20 бриллиантов'), 'Impossible 20-diamond final gate remains', JSON.stringify(result));
-results.eligibility = true;
+// 7. Final agency is permanently covered by tools/stage2d_smoke.mjs.
 
 // 8. Chapter 2 / scene 1 uses the compose overlay: Anna header, empty input caret, three notifications, no duplicated narration.
 result = await page.evaluate(async () => {
@@ -432,26 +383,7 @@ assert(result.overlaps === false, 'Compose phone overlaps dialogue in short land
 results.phoneLayout = true;
 await page.setViewportSize({ width: 1280, height: 720 });
 
-// 8c. Developer replay override hides alternate narration without changing real completionCount.
-result = await page.evaluate(async () => {
-  const key = 'heart_at_crossroads_beta2:dev:force_first_playthrough';
-  const previousCompletion = stats.completionCount;
-  stats.completionCount = 3;
-  localStorage.setItem(key, '1');
-  const chapter = await (await fetch('assets/data/chapter2.json')).json();
-  const scene = chapter.scenes.find(candidate => candidate.id === 1);
-  stage0kApplyReplayOverride(chapter);
-  const hidden = !Object.prototype.hasOwnProperty.call(scene, 'second_playthrough_text');
-  const completionWhileForced = stats.completionCount;
-  localStorage.removeItem(key);
-  stage0kApplyReplayOverride(chapter);
-  const restored = Object.prototype.hasOwnProperty.call(scene, 'second_playthrough_text');
-  stats.completionCount = previousCompletion;
-  return { hidden, restored, completionWhileForced };
-});
-assert(result.hidden && result.restored, 'Developer replay override did not hide/restore second_playthrough_text', JSON.stringify(result));
-assert(result.completionWhileForced === 3, 'Developer replay override modified completionCount', JSON.stringify(result));
-results.devReplayOverride = true;
+// 8c. Dev/release separation is permanently covered by tools/mode_smoke.mjs.
 
 // 9. Speaker focus follows the actual displayed character instead of hard-coded Anna/Vika positions.
 result = await page.evaluate(async () => {
