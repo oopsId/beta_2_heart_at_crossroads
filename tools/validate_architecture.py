@@ -8,24 +8,32 @@ HTML_PATH = ROOT / "heart_at_crossroads.html"
 
 EXPECTED_CSS = [
     "assets/css/game.css",
-    "assets/hud-hotfix.css",
-    "assets/phone-compact.css",
+    "assets/css/hud.css",
+    "assets/css/phone.css",
 ]
 EXPECTED_JS = [
     "assets/js/core/foundation.js",
     "assets/js/core/story-runtime.js",
     "assets/js/core/gallery-legacy.js",
     "assets/js/core/endings-presentation.js",
+    "assets/js/runtime/vn-behavior.js",
+    "assets/js/render/scene-renderer.js",
+    "assets/js/runtime/replay-progression.js",
+    "assets/js/ui/gallery.js",
+    "assets/js/ui/gallery-polish.js",
+    "assets/js/progression/diamonds.js",
+]
+OBSOLETE_FILES = [
+    "assets/js/core-runtime.js",
+    "assets/js/stage0k-runtime.js",
     "assets/js/stage0i-runtime.js",
     "assets/js/stage0j-runtime.js",
     "assets/js/stage0k-runtime-base.js",
     "assets/js/stage0n-gallery.js",
     "assets/js/stage0p-gallery-polish.js",
     "assets/js/stage0o-runtime.js",
-]
-OBSOLETE_FILES = [
-    "assets/js/core-runtime.js",
-    "assets/js/stage0k-runtime.js",
+    "assets/hud-hotfix.css",
+    "assets/phone-compact.css",
     ".github/workflows/refactor-branch-helper.yml",
 ]
 
