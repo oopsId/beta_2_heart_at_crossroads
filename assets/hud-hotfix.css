@@ -1,0 +1,59 @@
+/* Stage 0P/0Q UI polish: remove HUD scrollbars and restore gallery spacing/typography. */
+#menu {
+  overflow: visible !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  scrollbar-width: none !important;
+}
+#menu::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+#menu-btn,
+#stats {
+  flex: 0 0 auto;
+}
+
+#gallery-container.stage0n.ru .n-sub {
+  font-size: 0 !important;
+}
+#gallery-container.stage0n.ru .n-sub::before {
+  content: 'Прошлое остаётся навсегда';
+  font-family: GoodVibesCyr, cursive !important;
+  font-size: clamp(20px, 2vw, 29px) !important;
+}
+#gallery-container.stage0n .n-series {
+  margin: 7px auto 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  color: #dec99f !important;
+}
+#gallery-container.stage0n .n-status {
+  bottom: 70px !important;
+}
+#gallery-container.stage0n .n-unlock {
+  bottom: 72px !important;
+  white-space: nowrap !important;
+}
+.n-detail.ru .n-name {
+  font-family: GoodVibesCyr, cursive !important;
+}
+.n-detail.en .n-name {
+  font-family: GreatVibes, cursive !important;
+}
+
+@media (max-width: 700px) {
+  #gallery-container.stage0n .n-status,
+  #gallery-container.stage0n .n-unlock {
+    bottom: 66px !important;
+  }
+}
+@media (max-height: 570px) and (orientation: landscape) {
+  #gallery-container.stage0n .n-status,
+  #gallery-container.stage0n .n-unlock {
+    bottom: 58px !important;
+  }
+}

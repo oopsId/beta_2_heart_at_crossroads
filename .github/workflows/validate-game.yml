@@ -68,6 +68,8 @@ jobs:
           node tools/stage0o_smoke.mjs | tee artifacts/stage0o-smoke.json
           node tools/stage0o_continue_smoke.mjs
           node tools/stage0o_landscape_smoke.mjs
+          node tools/stage0p_gallery_polish_smoke.mjs
+          node tools/stage0q_hud_smoke.mjs
 
       - name: Upload browser report
         if: always()
