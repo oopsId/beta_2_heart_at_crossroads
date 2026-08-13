@@ -60,20 +60,31 @@
     const style = document.createElement('style');
     style.id = 'stage0o-phone-layout';
     style.textContent = `
+        body.stage0j-compose-scene {
+            --stage0o-phone-top: 4px;
+            --stage0o-phone-height: min(430px, calc(100vh - 245px));
+            --stage0o-phone-gap: 12px;
+        }
         #phone-compose-overlay {
-            top: 4px !important;
-            height: min(430px, calc(100vh - 245px)) !important;
+            top: var(--stage0o-phone-top, 4px) !important;
+            height: var(--stage0o-phone-height, min(430px, calc(100vh - 245px))) !important;
+        }
+        body.stage0j-compose-scene .dialogue-box {
+            bottom: 0 !important;
+            max-height: calc(100vh - var(--stage0o-phone-top) - var(--stage0o-phone-height) - var(--stage0o-phone-gap)) !important;
         }
         @media (max-width: 800px) {
-            #phone-compose-overlay {
-                top: 4px !important;
-                height: min(350px, 48vh) !important;
+            body.stage0j-compose-scene {
+                --stage0o-phone-top: 4px;
+                --stage0o-phone-height: min(350px, 48vh);
+                --stage0o-phone-gap: 10px;
             }
         }
         @media (max-height: 520px) and (orientation: landscape) {
-            #phone-compose-overlay {
-                top: 2px !important;
-                height: min(180px, 48vh) !important;
+            body.stage0j-compose-scene {
+                --stage0o-phone-top: 2px;
+                --stage0o-phone-height: min(180px, 48vh);
+                --stage0o-phone-gap: 8px;
             }
         }
     `;
