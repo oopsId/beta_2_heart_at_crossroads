@@ -11,6 +11,9 @@ EXPECTED_CSS = [
     "assets/css/hud.css",
     "assets/css/phone.css",
 ]
+EXPECTED_VENDOR_JS = [
+    "assets/vendor/gsap-3.11.5.min.js",
+]
 EXPECTED_JS = [
     "assets/js/core/foundation.js",
     "assets/js/core/story-runtime.js",
@@ -62,14 +65,20 @@ if local_css != EXPECTED_CSS:
     fail(f"local stylesheet order changed: expected {EXPECTED_CSS}, got {local_css}")
 
 js_refs = re.findall(r'<script[^>]+src=["\']([^"\']+)["\']', html, re.I)
-local_js = [ref for ref in js_refs if ref.startswith("assets/js/")]
-if local_js != EXPECTED_JS:
-    fail(f"local runtime order changed: expected {EXPECTED_JS}, got {local_js}")
+expected_script_order = EXPECTED_VENDOR_JS + EXPECTED_JS
+if js_refs != expected_script_order:
+    fail(f"runtime script order changed or external CDN returned: expected {expected_script_order}, got {js_refs}")
 
-for ref in EXPECTED_CSS + EXPECTED_JS:
+for ref in EXPECTED_CSS + expected_script_order:
     path = ROOT / ref
     if not path.is_file():
         fail(f"required external file missing: {ref}")
+
+vendor_path = ROOT / EXPECTED_VENDOR_JS[0]
+if vendor_path.is_file():
+    header = vendor_path.read_text(encoding="utf-8", errors="replace")[:600]
+    if "GSAP 3.11.5" not in header or "@license" not in header:
+        fail("vendored GSAP file is missing expected version/license header")
 
 for ref in OBSOLETE_FILES:
     if (ROOT / ref).exists():
@@ -100,6 +109,8 @@ if errors:
 
 print("ARCHITECTURE VALIDATION: PASS")
 print(f"CSS: {len(EXPECTED_CSS)} external stylesheets")
+print(f"Vendor JS: {len(EXPECTED_VENDOR_JS)} local dependency")
 print(f"JS: {len(EXPECTED_JS)} ordered local runtime scripts")
+print("External CDN runtime scripts: 0")
 print("Inline style/script blocks: 0")
 print("Temporary refactor helpers: 0")
