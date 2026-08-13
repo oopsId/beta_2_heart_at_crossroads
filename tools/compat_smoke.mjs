@@ -1,1 +1,36 @@
-console.log('PASS');
+import { chromium, firefox, webkit } from 'playwright';
+
+const browserName = process.env.BROWSER || 'firefox';
+const browserType = { chromium, firefox, webkit }[browserName];
+if (!browserType) throw new Error(`Unsupported browser: ${browserName}`);
+const browser = await browserType.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+const errors = [];
+page.on('pageerror', error => errors.push(String(error)));
+const url = process.env.GAME_URL || 'http://127.0.0.1:8000/heart_at_crossroads.html';
+await page.goto(url, { waitUntil: 'domcontentloaded' });
+await page.waitForFunction(() => typeof window.gsap === 'object' && typeof window.stage2dRouteStrength === 'function');
+const result = await page.evaluate(async () => {
+  const resources = performance.getEntriesByType('resource').map(entry => entry.name);
+  const localGsap = resources.some(name => name.includes('/assets/vendor/gsap-3.11.5.min.js'));
+  const generation = beginRuntimeSession('compat-final');
+  resetGameState(false);
+  currentChapter = 10;
+  currentScene = 5;
+  scriptData = await (await fetch('assets/data/chapter10.json')).json();
+  const scene = scriptData.scenes.find(item => item.id === 5);
+  const box = document.querySelector('.dialogue-box');
+  clearDialogueHandlers(box);
+  box.querySelectorAll('.choice-btn').forEach(node => node.remove());
+  stats.crown = stats.heart = stats.leaf = 0;
+  stats.relationships.dima = stats.relationships.mark = stats.relationships.sergey = stats.relationships.vika = 0;
+  await handleChoices(scene, box, null, generation);
+  const choices = [...box.querySelectorAll('.choice-btn')].map(button => ({ disabled: button.disabled, text: button.textContent }));
+  invalidateRuntimeSession('compat-final-done');
+  return { localGsap, choices };
+});
+if (!result.localGsap) throw new Error(`${browserName}: GSAP was not loaded from local vendor asset`);
+if (result.choices.length !== 6 || result.choices.some(choice => choice.disabled || choice.text.includes('🔒'))) throw new Error(`${browserName}: final agency contract failed: ${JSON.stringify(result.choices)}`);
+if (errors.length) throw new Error(`${browserName}: page errors: ${errors.join(' | ')}`);
+console.log(JSON.stringify({ status: 'PASS', browser: browserName, ...result }, null, 2));
+await browser.close();
