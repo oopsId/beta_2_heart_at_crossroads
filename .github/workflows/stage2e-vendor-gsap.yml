@@ -1,0 +1,41 @@
+name: Stage 2E vendor GSAP
+
+on:
+  push:
+    branches:
+      - stage-2e-dev-release-separation
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage-2e-dev-release-separation
+      - name: Fetch official GSAP npm package
+        run: |
+          set -euo pipefail
+          npm pack gsap@3.11.5
+          mkdir -p /tmp/gsap-package assets/vendor
+          tar -xzf gsap-3.11.5.tgz -C /tmp/gsap-package
+          cp /tmp/gsap-package/package/dist/gsap.min.js assets/vendor/gsap-3.11.5.min.js
+          license="$(find /tmp/gsap-package/package -maxdepth 1 -type f -iname 'license*' -print -quit)"
+          if [ -n "$license" ]; then cp "$license" assets/vendor/GSAP-LICENSE.txt; fi
+          cat > assets/vendor/README.md <<'EOF'
+          GSAP 3.11.5 is vendored from the official `gsap@3.11.5` npm package so the visual novel does not depend on a CDN at runtime.
+          Source package: https://www.npmjs.com/package/gsap/v/3.11.5
+          Runtime file: `gsap-3.11.5.min.js`
+          EOF
+      - name: Commit vendored dependency to branch
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/vendor
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Stage 2E: vendor GSAP 3.11.5 locally'
+          git push origin HEAD:stage-2e-dev-release-separation
