@@ -64,13 +64,16 @@ jobs:
         run: |
           mkdir -p artifacts
           node tools/runtime_smoke.mjs | tee artifacts/runtime-smoke.json
+          node tools/gallery_smoke.mjs | tee artifacts/gallery-smoke.json
 
       - name: Upload browser report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: runtime-smoke
-          path: artifacts/runtime-smoke.json
+          path: |
+            artifacts/runtime-smoke.json
+            artifacts/gallery-smoke.json
           if-no-files-found: ignore
 
       - name: Server log on failure
