@@ -14,7 +14,6 @@ EXPECTED_CSS = [
 EXPECTED_JS = [
     "assets/js/core/foundation.js",
     "assets/js/core/story-runtime.js",
-    "assets/js/core/gallery-legacy.js",
     "assets/js/core/endings-presentation.js",
     "assets/js/runtime/vn-behavior.js",
     "assets/js/render/scene-renderer.js",
@@ -25,6 +24,7 @@ EXPECTED_JS = [
 ]
 OBSOLETE_FILES = [
     "assets/js/core-runtime.js",
+    "assets/js/core/gallery-legacy.js",
     "assets/js/stage0k-runtime.js",
     "assets/js/stage0i-runtime.js",
     "assets/js/stage0j-runtime.js",
@@ -83,7 +83,7 @@ for ref in EXPECTED_JS:
     if "document.write(" in source:
         fail(f"dynamic document.write bootstrap returned in {ref}")
 
-for ref in EXPECTED_JS[:4]:
+for ref in EXPECTED_JS[:3]:
     path = ROOT / ref
     if path.is_file() and path.stat().st_size > 60_000:
         fail(f"core module grew beyond 60 KB monolith guard: {ref} ({path.stat().st_size} bytes)")
