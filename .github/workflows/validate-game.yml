@@ -22,7 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Validate architecture, chapters, routes, assets and runtime invariants
         run: |
           set -o pipefail
@@ -30,7 +29,6 @@ jobs:
           python3 tools/validate_architecture.py | tee artifacts/architecture-validation.txt
           python3 tools/validate_game.py --report artifacts/structural-validation.json
           python3 tools/validate_eligibility.py | tee artifacts/eligibility-validation.json
-
       - name: Upload structural report
         if: always()
         uses: actions/upload-artifact@v4
@@ -48,39 +46,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Install Playwright Chromium
         run: |
           npm install --no-save playwright
           npx playwright install --with-deps chromium
-
       - name: Start Pages-like server
         run: |
           python3 -m http.server 8000 --bind 127.0.0.1 > /tmp/game-http.log 2>&1 &
           sleep 1
           curl --fail --silent --show-error http://127.0.0.1:8000/heart_at_crossroads.html >/dev/null
-
       - name: Run browser regression smoke
         run: |
           set -o pipefail
           mkdir -p artifacts
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('tools/runtime_smoke.mjs')
-          source = path.read_text(encoding='utf-8')
-          start = source.index('// 7. Final options are gated before click')
-          end = source.index('// 8. Chapter 2 / scene 1 uses the compose overlay')
-          source = source[:start] + '// 7. Stage 2D final-agency contract is tested in stage2d_smoke.mjs.\n\n' + source[end:]
-          start = source.index('// 8c. Developer replay override hides alternate narration')
-          end = source.index('// 9. Speaker focus')
-          source = source[:start] + '// 8c. Dev/release separation is tested in mode_smoke.mjs.\n\n' + source[end:]
-          path.write_text(source, encoding='utf-8')
-          PY
           node tools/runtime_smoke.mjs | tee artifacts/runtime-smoke.json
           node tools/stage2d_smoke.mjs | tee artifacts/stage2d-smoke.json
           node tools/mode_smoke.mjs | tee artifacts/mode-smoke.json
@@ -90,7 +71,6 @@ jobs:
           node tools/stage0o_landscape_smoke.mjs
           node tools/stage0p_gallery_polish_smoke.mjs
           node tools/stage0q_hud_smoke.mjs
-
       - name: Upload browser report
         if: always()
         uses: actions/upload-artifact@v4
@@ -103,7 +83,6 @@ jobs:
             artifacts/gallery-smoke.json
             artifacts/stage0o-smoke.json
           if-no-files-found: ignore
-
       - name: Server log on failure
         if: failure()
         run: cat /tmp/game-http.log || true
