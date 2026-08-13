@@ -44,8 +44,20 @@ pattern = re.compile(
     r'    runtime_source = html \+ "\\n" \+ core_runtime\n\n',
     re.S,
 )
-replacement = '''    script_refs = re.findall(r'<script[^>]+src=["\\\'](assets/js/[^"\\\']+\\.js)["\\\']', html, re.I)\n    if not script_refs:\n        error("RUNTIME_INVARIANT", "heart_at_crossroads.html", "no local runtime scripts are included")\n    runtime_parts = [html]\n    for ref in script_refs:\n        path = ROOT / ref\n        try:\n            runtime_parts.append(path.read_text(encoding="utf-8"))\n        except Exception as exc:\n            error("RUNTIME_READ", ref, str(exc))\n    runtime_source = "\\n".join(runtime_parts)\n\n'''
-validator, count = pattern.subn(replacement, validator, count=1)
+replacement = '''    script_refs = re.findall(r'<script[^>]+src=["\\\'](assets/js/[^"\\\']+\\.js)["\\\']', html, re.I)
+    if not script_refs:
+        error("RUNTIME_INVARIANT", "heart_at_crossroads.html", "no local runtime scripts are included")
+    runtime_parts = [html]
+    for ref in script_refs:
+        path = ROOT / ref
+        try:
+            runtime_parts.append(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            error("RUNTIME_READ", ref, str(exc))
+    runtime_source = "\\n".join(runtime_parts)
+
+'''
+validator, count = pattern.subn(lambda _: replacement, validator, count=1)
 if count != 1:
     raise SystemExit('Stage 1B validator block not found')
 validator_path.write_text(validator, encoding='utf-8', newline='')
