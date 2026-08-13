@@ -31,9 +31,7 @@
                         enumerable: false
                     });
                 }
-                if (forceFirst) {
-                    delete value.second_playthrough_text;
-                }
+                if (forceFirst) delete value.second_playthrough_text;
             } else if (!forceFirst && Object.prototype.hasOwnProperty.call(value, '__stage0kSecondPlaythroughText')) {
                 value.second_playthrough_text = value.__stage0kSecondPlaythroughText;
             }
@@ -42,11 +40,8 @@
                 value.second_playthrough_text = value.__stage0kSecondPlaythroughText;
             }
 
-            if (Array.isArray(value)) {
-                value.forEach(visit);
-            } else {
-                Object.values(value).forEach(visit);
-            }
+            if (Array.isArray(value)) value.forEach(visit);
+            else Object.values(value).forEach(visit);
         }
 
         visit(root);
@@ -60,7 +55,6 @@
     const style = document.createElement('style');
     style.id = 'stage0k-styles';
     style.textContent = `
-        /* Restore the cinematic centered phone composition. */
         #phone-compose-overlay {
             left: 50% !important;
             top: clamp(22px, 6vh, 64px) !important;
@@ -74,8 +68,6 @@
         #phone-compose-overlay .stage0j-phone-screen {
             background: #dcebd5 url('assets/backgrounds/bg_phone_ui.png') center / cover no-repeat !important;
         }
-
-        /* Compose scenes use the normal VN dialogue layout; never push/crop it sideways. */
         body.stage0j-compose-scene .dialogue-box {
             left: 0 !important;
             right: 0 !important;
@@ -84,7 +76,6 @@
             min-height: 150px !important;
             max-height: 50vh !important;
         }
-
         #stage0k-dev-replay-control {
             position: fixed;
             left: 12px;
@@ -102,7 +93,6 @@
             user-select: none;
         }
         #stage0k-dev-replay-control input { margin: 0; }
-
         @media (max-width: 800px) {
             #phone-compose-overlay {
                 top: 12px !important;
@@ -114,8 +104,6 @@
                 max-height: 45vh !important;
             }
         }
-
-        /* Short landscape: keep the phone centered above the normal full-width dialogue. */
         @media (max-height: 520px) and (orientation: landscape) {
             #phone-compose-overlay {
                 left: 50% !important;
@@ -143,30 +131,20 @@
         const label = document.createElement('label');
         label.id = 'stage0k-dev-replay-control';
         label.title = 'Только beta/dev: не изменяет completionCount и настоящий профиль.';
-
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = devForceFirstPlaythrough();
         checkbox.setAttribute('aria-label', 'Игнорировать текст повторного прохождения');
-        checkbox.addEventListener('change', () => {
-            setDevForceFirstPlaythrough(checkbox.checked);
-        });
-
+        checkbox.addEventListener('change', () => setDevForceFirstPlaythrough(checkbox.checked));
         const text = document.createElement('span');
         text.textContent = 'DEV: обычный текст (без replay)';
-
         label.append(checkbox, text);
         document.body.appendChild(label);
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', mountDevControl, { once: true });
-    } else {
-        mountDevControl();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountDevControl, { once: true });
+    else mountDevControl();
 
-    // Keep the profile's real completionCount untouched. We only hide/restore the alternate text
-    // in the in-memory chapter/ending object used by the renderer.
     if (typeof loadChapter === 'function') {
         const baseLoadChapter = loadChapter;
         loadChapter = async function stage0kLoadChapter(...args) {
@@ -175,7 +153,6 @@
             return ok;
         };
     }
-
     if (typeof showScene === 'function') {
         const baseShowScene = showScene;
         showScene = async function stage0kShowScene(...args) {
@@ -183,7 +160,6 @@
             return await baseShowScene(...args);
         };
     }
-
     if (typeof showSceneWithTimer === 'function') {
         const baseShowSceneWithTimer = showSceneWithTimer;
         showSceneWithTimer = function stage0kShowSceneWithTimer(scene, ...args) {
@@ -191,7 +167,6 @@
             return baseShowSceneWithTimer(scene, ...args);
         };
     }
-
     if (typeof showEnding === 'function') {
         const baseShowEnding = showEnding;
         showEnding = function stage0kShowEnding(ending, ...args) {
@@ -201,7 +176,7 @@
     }
 })();
 
-// Stage 0M: temporary beta balance and the original four-card gallery progression.
+// Stage 0M: temporary beta balance + repaired four-card gallery.
 (() => {
     const TEST_STARTING_DIAMONDS = 70;
     const baseCreateFreshRunStats = createFreshRunStats;
@@ -210,12 +185,123 @@
         fresh.diamonds = TEST_STARTING_DIAMONDS;
         return fresh;
     };
-    // The first in-memory state was created before this late runtime layer loaded.
-    // Top it up too; Continue still overwrites it with the valid saved run balance.
+    // The initial page state predates this late layer. Continue subsequently restores its saved balance.
     if (!runtimeActive) {
         stats.diamonds = TEST_STARTING_DIAMONDS;
         updateDiamondsDisplay();
     }
+
+    const galleryStyle = document.createElement('style');
+    galleryStyle.id = 'stage0m-gallery-styles';
+    galleryStyle.textContent = `
+        #gallery-container.stage0m-gallery {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            box-sizing: border-box !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            padding: 28px 24px 42px !important;
+            background: url('assets/backgrounds/shoebox_texture.png') center / cover no-repeat !important;
+            z-index: 4000 !important;
+            opacity: 1 !important;
+            align-items: center !important;
+        }
+        #gallery-container.stage0m-gallery .stage0m-gallery-grid {
+            width: min(720px, 94vw);
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+            margin: 18px auto 0;
+            padding-bottom: 30px;
+        }
+        #gallery-container.stage0m-gallery .premium-card,
+        #gallery-container.stage0m-gallery .premium-card:not(.front),
+        #gallery-container.stage0m-gallery .premium-card.front,
+        #gallery-container.stage0m-gallery .premium-card.peek {
+            position: relative !important;
+            width: 100% !important;
+            height: auto !important;
+            aspect-ratio: 1 / 1 !important;
+            min-height: 0 !important;
+            opacity: 1 !important;
+            transform: none !important;
+            filter: none !important;
+            overflow: hidden !important;
+            border-radius: 12px !important;
+            border: 2px solid rgba(245,230,201,.72) !important;
+            background: #d8c4a4 !important;
+            box-shadow: 0 10px 28px rgba(0,0,0,.38) !important;
+            cursor: pointer;
+        }
+        #gallery-container.stage0m-gallery .premium-card.locked .unlock-text {
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 58px !important;
+            width: auto !important;
+            padding: 8px 10px !important;
+            background: rgba(245,240,225,.9);
+            color: #5D4037 !important;
+            font: 600 14px/1.25 Arial, sans-serif !important;
+            text-shadow: none !important;
+        }
+        #gallery-container.stage0m-gallery .premium-card .card-name {
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: auto !important;
+            box-sizing: border-box;
+            background: linear-gradient(transparent, rgba(20,12,8,.82));
+            color: #fff !important;
+            padding: 32px 10px 10px !important;
+            text-shadow: 0 1px 3px #000 !important;
+        }
+        #gallery-container.stage0m-gallery .card-unlock-button {
+            bottom: 12px !important;
+            white-space: nowrap;
+        }
+        #gallery-container.stage0m-gallery .card-unlock-button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+        .stage0m-card-detail-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 22px;
+            box-sizing: border-box;
+            background: rgba(0,0,0,.82);
+            cursor: pointer;
+        }
+        .stage0m-card-detail {
+            position: relative;
+            width: min(620px, 92vw);
+            max-height: 88vh;
+            aspect-ratio: 1 / 1;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 16px 48px rgba(0,0,0,.6);
+        }
+        .stage0m-card-detail img { width:100%; height:100%; object-fit:contain; background:#111; }
+        .stage0m-card-detail div {
+            position:absolute; left:0; right:0; bottom:0; padding:34px 14px 12px;
+            color:#fff; text-align:center; background:linear-gradient(transparent,rgba(0,0,0,.85));
+            font-size:1.2rem; text-shadow:0 1px 3px #000;
+        }
+        @media (max-width: 620px) {
+            #gallery-container.stage0m-gallery { padding: 20px 14px 34px !important; }
+            #gallery-container.stage0m-gallery .stage0m-gallery-grid {
+                width: min(360px, 92vw);
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+        }
+    `;
+    document.head.appendChild(galleryStyle);
 
     const cards = () => Array.isArray(cardSeries?.romance?.cards) ? cardSeries.romance.cards : [];
     const ruleFor = card => {
@@ -261,7 +347,6 @@
         if (!Array.isArray(stats.memories)) stats.memories = [];
         stats.memories = [...new Set([...stats.memories, card.id])];
         updateDiamondsDisplay();
-        // Ownership is profile metaprogression; the current test diamond balance remains run-local.
         await saveProfile();
         return { ok: true, reason: 'purchased', rule: state.rule, diamonds: stats.diamonds };
     }
@@ -279,7 +364,7 @@
         const element = document.createElement('div');
         element.id = 'stage0m-gallery-notice';
         element.textContent = message;
-        element.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:5000;padding:10px 16px;border-radius:12px;background:rgba(30,22,17,.92);color:#F5E6C9;font:16px/1.3 Arial,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.35)';
+        element.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:5500;padding:10px 16px;border-radius:12px;background:rgba(30,22,17,.94);color:#F5E6C9;font:16px/1.3 Arial,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.35)';
         document.body.appendChild(element);
         window.setTimeout(() => element.remove(), 2400);
     }
@@ -302,6 +387,25 @@
         element.appendChild(name);
     }
 
+    function showCardDetail(card, isRussian) {
+        document.querySelector('.stage0m-card-detail-backdrop')?.remove();
+        const backdrop = document.createElement('div');
+        backdrop.className = 'stage0m-card-detail-backdrop';
+        const detail = document.createElement('div');
+        detail.className = 'stage0m-card-detail';
+        const image = document.createElement('img');
+        image.src = `assets/memories/${card.id}.png`;
+        image.alt = isRussian ? card.name : card.nameEn;
+        const name = document.createElement('div');
+        name.textContent = isRussian ? card.name : card.nameEn;
+        detail.append(image, name);
+        backdrop.appendChild(detail);
+        backdrop.addEventListener('click', () => backdrop.remove());
+        detail.addEventListener('click', event => event.stopPropagation());
+        detail.addEventListener('dblclick', () => backdrop.remove());
+        document.body.appendChild(backdrop);
+    }
+
     createCardElement = function stage0mCreateCardElement(card, _seriesKey, _cardsContainer, clickSound, isRussian) {
         const element = document.createElement('div');
         element.className = 'premium-card';
@@ -320,7 +424,6 @@
 
         const info = document.createElement('div');
         info.className = 'unlock-text';
-        info.style.fontFamily = isRussian ? 'GoodVibesCyr, cursive' : 'GreatVibes, cursive';
         const rule = ruleFor(card);
         if (rule.type === 'completion') {
             info.textContent = isRussian ? 'Откроется после второго прохождения' : 'Unlocks after the second playthrough';
@@ -342,7 +445,6 @@
         element.appendChild(info);
         const button = document.createElement('button');
         button.className = 'card-unlock-button';
-        button.style.fontFamily = isRussian ? 'GoodVibesCyr, cursive' : 'GreatVibes, cursive';
         button.textContent = isRussian ? `Открыть за ${rule.cost} 💎` : `Unlock for ${rule.cost} 💎`;
         button.disabled = stats.diamonds < rule.cost;
         let busy = false;
@@ -361,7 +463,6 @@
                 }
                 renderUnlockedCard(card, element, isRussian);
                 updateSeriesTitle();
-                if (typeof showUnlockNotification === 'function' && window.gsap) showUnlockNotification(card, isRussian);
                 new Audio('assets/sounds/sfx_card_unlock.mp3').play().catch(() => {});
                 const clickPromise = clickSound?.play?.();
                 clickPromise?.catch?.(() => {});
@@ -369,24 +470,66 @@
                 busy = false;
             }
         };
-        // Stop the legacy parent touchstart handler before it can swallow the purchase click.
         button.addEventListener('touchstart', handleUnlock, { passive: false });
         button.addEventListener('click', handleUnlock);
         element.appendChild(button);
         return element;
     };
 
-    const baseShowPremiumGallery = showPremiumGallery;
     showPremiumGallery = async function stage0mShowPremiumGallery() {
         await syncGalleryProgress();
-        baseShowPremiumGallery();
+        const isRussian = stats.language === 'ru';
+        const gallery = document.getElementById('gallery-container');
+        const start = document.getElementById('start-screen');
+        const clickSound = new Audio('assets/sounds/sfx_camera_click.mp3');
+        document.body.style.overflow = 'hidden';
+        start.style.display = 'none';
+        gallery.classList.add('stage0m-gallery');
+        gallery.style.display = 'flex';
+        gallery.innerHTML = '';
+
+        const close = document.createElement('button');
+        close.type = 'button';
+        close.setAttribute('aria-label', isRussian ? 'Закрыть галерею' : 'Close gallery');
+        close.textContent = '×';
+        close.style.cssText = 'position:fixed;top:14px;right:18px;z-index:4100;width:44px;height:44px;border-radius:50%;border:1px solid rgba(245,230,201,.7);background:rgba(40,28,20,.78);color:#F5E6C9;font:32px/38px Arial;cursor:pointer;';
+        close.addEventListener('click', () => {
+            document.querySelector('.stage0m-card-detail-backdrop')?.remove();
+            gallery.innerHTML = '';
+            gallery.classList.remove('stage0m-gallery');
+            gallery.style.display = 'none';
+            document.body.style.overflow = '';
+            start.style.display = 'flex';
+        });
+
+        const header = document.createElement('div');
+        header.className = 'gallery-header';
+        header.style.cssText = 'opacity:1;margin:0 0 4px;color:#F5E6C9;';
+        header.textContent = isRussian ? 'Коллекционные карточки' : 'Collection Cards';
+        const subtitle = document.createElement('div');
+        subtitle.style.cssText = 'color:#F5E6C9;font-size:1.45rem;text-align:center;text-shadow:2px 2px 4px rgba(0,0,0,.5);';
+        subtitle.textContent = isRussian ? 'Прошлое остаётся навсегда' : 'The past remains forever';
+        const series = document.createElement('div');
+        series.className = 'series-title';
+        series.style.cssText = 'color:#e0c18e;font-size:1.2rem;margin:8px 0 0;text-align:center;';
+        const grid = document.createElement('div');
+        grid.className = 'stage0m-gallery-grid';
+
+        for (const card of cards()) {
+            const element = createCardElement(card, 'romance', grid, clickSound, isRussian);
+            element.addEventListener('click', event => {
+                if (event.target.closest('.card-unlock-button')) return;
+                if (isUnlocked(card)) showCardDetail(card, isRussian);
+            });
+            grid.appendChild(element);
+        }
+
+        gallery.append(close, header, subtitle, series, grid);
         updateSeriesTitle();
+        return true;
     };
-    const baseShowSimpleGallery = showSimpleGallery;
-    showSimpleGallery = async function stage0mShowSimpleGallery() {
-        await syncGalleryProgress();
-        return baseShowSimpleGallery();
-    };
+
+    showSimpleGallery = showPremiumGallery;
 
     window.stage0mTestStartingDiamonds = TEST_STARTING_DIAMONDS;
     window.stage0mGalleryRule = ruleFor;
