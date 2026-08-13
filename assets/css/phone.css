@@ -1,2 +1,78 @@
-@media (max-height:760px){html body.stage0j-compose-scene{--stage0o-phone-height:min(320px,42vh)!important}}
-@media (max-height:520px) and (orientation:landscape){html body.stage0j-compose-scene{--stage0o-phone-top:2px!important;--stage0o-phone-height:140px!important;--stage0o-phone-gap:8px!important}html body.stage0j-compose-scene #phone-compose-overlay .stage0j-phone-header{height:32px!important;padding:0 5px!important}html body.stage0j-compose-scene #phone-compose-overlay .stage0j-header-avatar{width:20px!important;height:20px!important}html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-stack{top:34px!important;bottom:34px!important;left:4px!important;right:4px!important;gap:1px!important}html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification{min-height:22px!important;padding:1px 3px!important;grid-template-columns:20px 1fr!important;gap:3px!important}html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-avatar,html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-initial{width:20px!important;height:20px!important}html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-copy strong,html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-copy span{font-size:9px!important;line-height:1.05!important}html body.stage0j-compose-scene #phone-compose-overlay .stage0j-compose-input-wrap{left:4px!important;right:4px!important;bottom:4px!important;min-height:24px!important}}
+/* Phone layout owns phone geometry; the authored VN dialogue strip remains in hud.css. */
+html body.stage0j-compose-scene {
+  --stage0o-phone-top: 4px;
+  --stage0o-phone-height: min(430px, calc(80vh - 166px));
+  --stage0o-phone-gap: 12px;
+}
+
+html body.stage0j-compose-scene #phone-compose-overlay {
+  top: var(--stage0o-phone-top) !important;
+  height: var(--stage0o-phone-height) !important;
+}
+
+@media (max-width: 800px) {
+  html body.stage0j-compose-scene {
+    --stage0o-phone-top: 4px;
+    --stage0o-phone-height: min(350px, 48vh, calc(80vh - 164px));
+    --stage0o-phone-gap: 10px;
+  }
+}
+
+@media (max-height: 760px) {
+  html body.stage0j-compose-scene {
+    --stage0o-phone-height: min(320px, 42vh) !important;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  html body.stage0j-compose-scene {
+    --stage0o-phone-top: 2px !important;
+    --stage0o-phone-height: 140px !important;
+    --stage0o-phone-gap: 8px !important;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-phone-header {
+    height: 32px !important;
+    padding: 0 5px !important;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-header-avatar {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-stack {
+    top: 34px !important;
+    bottom: 34px !important;
+    left: 4px !important;
+    right: 4px !important;
+    gap: 1px !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    pointer-events: auto;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-stack::-webkit-scrollbar {
+    display: none;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification {
+    min-height: 22px !important;
+    padding: 1px 3px !important;
+    grid-template-columns: 20px 1fr !important;
+    gap: 3px !important;
+    flex: 0 0 auto;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-avatar,
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-initial {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-copy strong,
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-notification-copy span {
+    font-size: 9px !important;
+    line-height: 1.05 !important;
+  }
+  html body.stage0j-compose-scene #phone-compose-overlay .stage0j-compose-input-wrap {
+    left: 4px !important;
+    right: 4px !important;
+    bottom: 4px !important;
+    min-height: 24px !important;
+  }
+}
