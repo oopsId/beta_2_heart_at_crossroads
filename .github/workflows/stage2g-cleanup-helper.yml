@@ -1,0 +1,69 @@
+name: Stage 2G cleanup helper
+
+on:
+  push:
+    branches:
+      - stage-2g-production-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage-2g-production-cleanup
+      - name: Apply deterministic cleanup
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          finals_path = Path('assets/data/finals.json')
+          finals = json.loads(finals_path.read_text(encoding='utf-8'))
+          for ending in finals.get('endings', []):
+              ending.pop('legacyRequirements', None)
+          finals_path.write_text(json.dumps(finals, ensure_ascii=False, indent=4) + '\n', encoding='utf-8')
+
+          chapter_path = Path('assets/data/chapter10.json')
+          chapter = json.loads(chapter_path.read_text(encoding='utf-8'))
+          scene = next(item for item in chapter['scenes'] if item.get('id') == 5)
+          choice = next(item for item in scene['choices'] if item.get('endingId') == 'new_start')
+          if choice.get('id') != 'premium':
+              raise SystemExit(f'unexpected new_start choice id: {choice.get("id")!r}')
+          choice['id'] = 'new_start'
+          chapter_path.write_text(json.dumps(chapter, ensure_ascii=False, indent=4) + '\n', encoding='utf-8')
+
+          validator = Path('tools/validate_eligibility.py')
+          source = validator.read_text(encoding='utf-8')
+          source = source.replace("'premium':'new_start'", "'new_start':'new_start'")
+          source = source.replace("choices['premium']", "choices['new_start']")
+          validator.write_text(source, encoding='utf-8')
+
+          smoke = Path('tools/runtime_smoke.mjs')
+          source = smoke.read_text(encoding='utf-8')
+          start = source.index('// 7. Final options are gated before click')
+          end = source.index('// 8. Chapter 2 / scene 1 uses the compose overlay')
+          source = source[:start] + '// 7. Final agency is permanently covered by tools/stage2d_smoke.mjs.\n\n' + source[end:]
+          start = source.index('// 8c. Developer replay override hides alternate narration')
+          end = source.index('// 9. Speaker focus')
+          source = source[:start] + '// 8c. Dev/release separation is permanently covered by tools/mode_smoke.mjs.\n\n' + source[end:]
+          smoke.write_text(source, encoding='utf-8')
+
+          plan = Path('docs/stage2d_endings_economy_plan.txt')
+          text = plan.read_text(encoding='utf-8')
+          text = text.replace('id "premium"', 'id "new_start"')
+          text = text.replace('choice "premium"', 'choice "new_start"')
+          plan.write_text(text, encoding='utf-8')
+          PY
+          git diff --check
+      - name: Commit cleanup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/data/finals.json assets/data/chapter10.json tools/validate_eligibility.py tools/runtime_smoke.mjs docs/stage2d_endings_economy_plan.txt
+          git commit -m 'Stage 2G: remove legacy ending and smoke contracts'
+          git push origin HEAD:stage-2g-production-cleanup
