@@ -4,6 +4,21 @@
 // - numeric cards cost that many diamonds, but can only be bought after completionCount >= 1.
 
 (() => {
+    const TEST_STARTING_DIAMONDS = 70;
+    const baseCreateFreshRunStats = createFreshRunStats;
+
+    // Stage 0M is explicitly a beta/test top-up. Existing valid Continue saves keep their saved balance,
+    // while every freshly created run starts with 70 diamonds.
+    createFreshRunStats = function stage0mCreateFreshRunStats(...args) {
+        const fresh = baseCreateFreshRunStats(...args);
+        fresh.diamonds = TEST_STARTING_DIAMONDS;
+        return fresh;
+    };
+    if (!runtimeActive) {
+        stats.diamonds = TEST_STARTING_DIAMONDS;
+        updateDiamondsDisplay();
+    }
+
     const romanceCards = () => Array.isArray(cardSeries?.romance?.cards) ? cardSeries.romance.cards : [];
 
     function stage0mGalleryRule(card) {
@@ -62,6 +77,7 @@
         if (!Array.isArray(stats.memories)) stats.memories = [];
         stats.memories = [...new Set([...stats.memories, card.id])];
         updateDiamondsDisplay();
+        // Card ownership is metaprogression and must survive new runs/reloads.
         await saveProfile();
         return { ok: true, reason: 'purchased', rule: availability.rule, diamonds: stats.diamonds };
     }
@@ -165,26 +181,38 @@
             if (unlockButton.disabled) {
                 unlockButton.title = isRussian ? 'Недостаточно бриллиантов' : 'Not enough diamonds';
             }
-            unlockButton.addEventListener('click', async event => {
+
+            let unlocking = false;
+            const handleUnlock = async event => {
                 event.preventDefault();
                 event.stopPropagation();
-                const result = await stage0mPurchaseGalleryCard(card);
-                if (!result.ok) {
-                    const messages = {
-                        'first-playthrough-required': isRussian ? 'Сначала завершите первое прохождение' : 'Finish the first playthrough first',
-                        'not-enough-diamonds': isRussian ? 'Недостаточно бриллиантов' : 'Not enough diamonds'
-                    };
-                    stage0mGalleryNotice(messages[result.reason] || (isRussian ? 'Карточка пока недоступна' : 'Card is not available yet'));
-                    return;
-                }
+                if (unlocking) return;
+                unlocking = true;
+                try {
+                    const result = await stage0mPurchaseGalleryCard(card);
+                    if (!result.ok) {
+                        const messages = {
+                            'first-playthrough-required': isRussian ? 'Сначала завершите первое прохождение' : 'Finish the first playthrough first',
+                            'not-enough-diamonds': isRussian ? 'Недостаточно бриллиантов' : 'Not enough diamonds'
+                        };
+                        stage0mGalleryNotice(messages[result.reason] || (isRussian ? 'Карточка пока недоступна' : 'Card is not available yet'));
+                        return;
+                    }
 
-                stage0mRenderUnlockedCard(card, cardElement, isRussian);
-                stage0mUpdateSeriesTitle();
-                if (typeof showUnlockNotification === 'function' && window.gsap) showUnlockNotification(card, isRussian);
-                const unlockSound = new Audio('assets/sounds/sfx_card_unlock.mp3');
-                unlockSound.play().catch(() => {});
-                clickSound?.play?.().catch?.(() => {});
-            });
+                    stage0mRenderUnlockedCard(card, cardElement, isRussian);
+                    stage0mUpdateSeriesTitle();
+                    if (typeof showUnlockNotification === 'function' && window.gsap) showUnlockNotification(card, isRussian);
+                    const unlockSound = new Audio('assets/sounds/sfx_card_unlock.mp3');
+                    unlockSound.play().catch(() => {});
+                    const clickPromise = clickSound?.play?.();
+                    clickPromise?.catch?.(() => {});
+                } finally {
+                    unlocking = false;
+                }
+            };
+            // The legacy card itself listens on touchstart; stop that event here so touch purchase works.
+            unlockButton.addEventListener('touchstart', handleUnlock, { passive: false });
+            unlockButton.addEventListener('click', handleUnlock);
             cardElement.appendChild(unlockButton);
             return cardElement;
         }
@@ -207,7 +235,8 @@
         if (cardElement) stage0mRenderUnlockedCard(card, cardElement, isRussian);
         stage0mUpdateSeriesTitle();
         if (typeof showUnlockNotification === 'function' && window.gsap) showUnlockNotification(card, isRussian);
-        clickSound?.play?.().catch?.(() => {});
+        const clickPromise = clickSound?.play?.();
+        clickPromise?.catch?.(() => {});
         return true;
     };
 
@@ -224,6 +253,7 @@
         return baseShowSimpleGallery();
     };
 
+    window.stage0mTestStartingDiamonds = TEST_STARTING_DIAMONDS;
     window.stage0mGalleryRule = stage0mGalleryRule;
     window.stage0mSyncGalleryProgress = stage0mSyncGalleryProgress;
     window.stage0mCanBuyGalleryCard = stage0mCanBuyGalleryCard;
