@@ -15,6 +15,35 @@
   flex: 0 0 auto;
 }
 
+/* Stage 0R: phone scenes keep the original authored VN dialogue strip. */
+html body.stage0j-compose-scene #game-container .dialogue-box {
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 20% !important;
+  width: auto !important;
+  min-height: 150px !important;
+  max-height: 50vh !important;
+}
+html body.stage0j-compose-scene {
+  --stage0o-phone-top: 4px !important;
+  --stage0o-phone-height: min(430px, calc(80vh - 166px)) !important;
+  --stage0o-phone-gap: 12px !important;
+}
+@media (max-width: 800px) {
+  html body.stage0j-compose-scene {
+    --stage0o-phone-top: 4px !important;
+    --stage0o-phone-height: min(350px, 48vh, calc(80vh - 164px)) !important;
+    --stage0o-phone-gap: 10px !important;
+  }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  html body.stage0j-compose-scene {
+    --stage0o-phone-top: 2px !important;
+    --stage0o-phone-height: min(205px, calc(80vh - 160px)) !important;
+    --stage0o-phone-gap: 8px !important;
+  }
+}
+
 #gallery-container.stage0n.ru .n-sub {
   font-size: 0 !important;
 }
