@@ -25,6 +25,7 @@ jobs:
 
       - name: Validate architecture, chapters, routes, assets and runtime invariants
         run: |
+          set -o pipefail
           mkdir -p artifacts
           python3 tools/validate_architecture.py | tee artifacts/architecture-validation.txt
           python3 tools/validate_game.py --report artifacts/structural-validation.json
@@ -66,8 +67,20 @@ jobs:
 
       - name: Run browser regression smoke
         run: |
+          set -o pipefail
           mkdir -p artifacts
+          # Stage 0I test 7 asserted final-route locks. Stage 2D deliberately removes that
+          # product contract; the replacement contract is tools/stage2d_smoke.mjs.
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tools/runtime_smoke.mjs')
+          source = path.read_text(encoding='utf-8')
+          start = source.index('// 7. Final options are gated before click')
+          end = source.index('// 8. Chapter 2 / scene 1 uses the compose overlay')
+          path.write_text(source[:start] + '// 7. Stage 2D final-agency contract is tested in stage2d_smoke.mjs.\n\n' + source[end:], encoding='utf-8')
+          PY
           node tools/runtime_smoke.mjs | tee artifacts/runtime-smoke.json
+          node tools/stage2d_smoke.mjs | tee artifacts/stage2d-smoke.json
           node tools/gallery_smoke.mjs | tee artifacts/gallery-smoke.json
           node tools/stage0o_smoke.mjs | tee artifacts/stage0o-smoke.json
           node tools/stage0o_continue_smoke.mjs
@@ -82,6 +95,7 @@ jobs:
           name: runtime-smoke
           path: |
             artifacts/runtime-smoke.json
+            artifacts/stage2d-smoke.json
             artifacts/gallery-smoke.json
             artifacts/stage0o-smoke.json
           if-no-files-found: ignore
