@@ -233,39 +233,44 @@ html body.stage0j-compose-scene #game-container .dialogue-box {
 #start-screen #stage0k-dev-replay-control input{margin:0}
 
 /*
- * Portrait composition pass 2 keeps the refined horizontal scale, but sprites stay
- * physically grounded. Raising the whole character element made cropped PNGs float.
+ * Cropped square character PNGs stay physically grounded at bottom:0. On tall/narrow
+ * portrait screens, scale them from the bottom edge instead of lifting the whole element;
+ * wider mobile viewports keep the refined 136vw/130vw baseline composition.
  */
 @media (max-width: 800px) and (orientation: portrait) {
   html body:not(.stage0j-compose-scene) #character-left,
   html body:not(.stage0j-compose-scene) #character-right {
-    width: 136vw !important;
+    --heart-mobile-character-width: clamp(136vw, 72vh, 165vw);
+    --heart-mobile-character-shift: calc((var(--heart-mobile-character-width) - 70vw) / 2);
+    width: var(--heart-mobile-character-width) !important;
     max-width: none !important;
     bottom: 0 !important;
   }
 
   html body:not(.stage0j-compose-scene) #character-left {
-    left: calc(var(--heart-mobile-left-authored, -15%) - 33vw) !important;
+    left: calc(var(--heart-mobile-left-authored, -15%) - var(--heart-mobile-character-shift)) !important;
   }
 
   html body:not(.stage0j-compose-scene) #character-right {
-    right: calc(var(--heart-mobile-right-authored, -15%) - 33vw) !important;
+    right: calc(var(--heart-mobile-right-authored, -15%) - var(--heart-mobile-character-shift)) !important;
   }
 
   html body.stage0j-compose-scene #character-left,
   html body.stage0j-compose-scene #character-right {
-    width: 130vw !important;
+    --heart-mobile-character-width: clamp(130vw, 68vh, 160vw);
+    --heart-mobile-character-shift: calc((var(--heart-mobile-character-width) - 70vw) / 2);
+    width: var(--heart-mobile-character-width) !important;
     max-width: none !important;
     bottom: 0 !important;
     z-index: 2 !important;
   }
 
   html body.stage0j-compose-scene #character-left {
-    left: calc(var(--heart-mobile-left-authored, -15%) - 30vw) !important;
+    left: calc(var(--heart-mobile-left-authored, -15%) - var(--heart-mobile-character-shift)) !important;
   }
 
   html body.stage0j-compose-scene #character-right {
-    right: calc(var(--heart-mobile-right-authored, -15%) - 30vw) !important;
+    right: calc(var(--heart-mobile-right-authored, -15%) - var(--heart-mobile-character-shift)) !important;
   }
 
   html body.stage0j-compose-scene #phone-compose-overlay {
