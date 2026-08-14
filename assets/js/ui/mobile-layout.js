@@ -1,7 +1,11 @@
-// Portrait-mobile layout sync: preserve authored character centres and pin the compose phone to dialogue.
+// Portrait-mobile layout sync: preserve authored character centres and pin scene overlays to the real dialogue geometry.
 (() => {
     const portraitMobile = window.matchMedia('(max-width: 800px) and (orientation: portrait)');
     let syncFrame = 0;
+
+    function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
 
     function syncCharacterOffsets() {
         const left = document.getElementById('character-left');
@@ -18,25 +22,49 @@
         }
     }
 
-    function syncPhoneDialogueAnchor() {
+    function clearDialogueGeometry(body) {
+        body.style.removeProperty('--heart-mobile-dialogue-top');
+        body.style.removeProperty('--heart-mobile-character-lift');
+        body.style.removeProperty('--phone-dialogue-top');
+    }
+
+    function syncDialogueGeometry() {
         const body = document.body;
         if (!body) return false;
-        if (!portraitMobile.matches || !body.classList.contains('stage0j-compose-scene')) {
-            body.style.removeProperty('--phone-dialogue-top');
+        if (!portraitMobile.matches) {
+            clearDialogueGeometry(body);
             return false;
         }
 
         const dialogue = document.querySelector('#game-container .dialogue-box');
-        if (!dialogue || getComputedStyle(dialogue).display === 'none') return false;
+        if (!dialogue || getComputedStyle(dialogue).display === 'none') {
+            clearDialogueGeometry(body);
+            return false;
+        }
+
         const rect = dialogue.getBoundingClientRect();
-        if (!Number.isFinite(rect.top)) return false;
-        body.style.setProperty('--phone-dialogue-top', `${Math.max(0, rect.top).toFixed(2)}px`);
+        if (!Number.isFinite(rect.top) || !Number.isFinite(rect.height)) return false;
+
+        const dialogueTop = Math.max(0, rect.top);
+        const composeScene = body.classList.contains('stage0j-compose-scene');
+        // Both modes follow the real dialogue height. Normal scenes lift enough to keep
+        // faces above a real choice stack; compose scenes need a stronger correction because
+        // the phone also occupies the space above the strip.
+        const lift = composeScene
+            ? clamp(rect.height * 0.45, 56, 190)
+            : clamp(rect.height * 0.30, 24, 110);
+
+        body.style.setProperty('--heart-mobile-dialogue-top', `${dialogueTop.toFixed(2)}px`);
+        body.style.setProperty('--heart-mobile-character-lift', `${lift.toFixed(2)}px`);
+
+        if (composeScene) body.style.setProperty('--phone-dialogue-top', `${dialogueTop.toFixed(2)}px`);
+        else body.style.removeProperty('--phone-dialogue-top');
         return true;
     }
 
     function syncNow() {
         syncCharacterOffsets();
-        syncPhoneDialogueAnchor();
+        syncDialogueGeometry();
     }
 
     function scheduleSync() {

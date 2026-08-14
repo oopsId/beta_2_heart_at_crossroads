@@ -230,3 +230,46 @@ html body.stage0j-compose-scene #game-container .dialogue-box {
 
 #stage0k-dev-replay-control{position:fixed;left:12px;bottom:10px;z-index:5005;display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:8px;background:rgba(20,20,20,.68);color:#fff;font:12px/1.2 Arial,sans-serif;pointer-events:auto;user-select:none}
 #stage0k-dev-replay-control input{margin:0}
+
+/*
+ * Portrait composition pass 2.
+ * Normal scenes are reduced about six percent from the first mobile fix while keeping
+ * their authored horizontal centres. Compose-phone scenes get their own near-desktop
+ * sprite scale. Both modes lift from the real dialogue top so faces stay above the strip.
+ */
+@media (max-width: 800px) and (orientation: portrait) {
+  html body:not(.stage0j-compose-scene) #character-left,
+  html body:not(.stage0j-compose-scene) #character-right {
+    width: 136vw !important;
+    max-width: none !important;
+    bottom: var(--heart-mobile-character-lift, 24px) !important;
+  }
+
+  html body:not(.stage0j-compose-scene) #character-left {
+    left: calc(var(--heart-mobile-left-authored, -15%) - 33vw) !important;
+  }
+
+  html body:not(.stage0j-compose-scene) #character-right {
+    right: calc(var(--heart-mobile-right-authored, -15%) - 33vw) !important;
+  }
+
+  html body.stage0j-compose-scene #character-left,
+  html body.stage0j-compose-scene #character-right {
+    width: 130vw !important;
+    max-width: none !important;
+    bottom: var(--heart-mobile-character-lift, 48px) !important;
+    z-index: 2 !important;
+  }
+
+  html body.stage0j-compose-scene #character-left {
+    left: calc(var(--heart-mobile-left-authored, -15%) - 30vw) !important;
+  }
+
+  html body.stage0j-compose-scene #character-right {
+    right: calc(var(--heart-mobile-right-authored, -15%) - 30vw) !important;
+  }
+
+  html body.stage0j-compose-scene #phone-compose-overlay {
+    z-index: 4 !important;
+  }
+}
