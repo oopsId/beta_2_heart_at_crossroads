@@ -52,6 +52,7 @@ const characters = await page.evaluate(async () => {
     rendered,
     sceneId: scene?.id,
     viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
     dialogueTop: dialogueRect.top,
     dialogueHeight: dialogueRect.height,
     choiceCount: dialogue.querySelectorAll('.choice-btn').length,
@@ -69,9 +70,12 @@ const characters = await page.evaluate(async () => {
 assert(characters.rendered === true && characters.sceneId === 12 && characters.compose === false,
   'Reported Sergey mobile scene did not render', JSON.stringify(characters));
 assert(characters.choiceCount === 3, 'Reported mobile regression is not exercising its real choices', JSON.stringify(characters));
-assert(characters.leftWidth >= characters.viewportWidth * 1.35 && characters.leftWidth <= characters.viewportWidth * 1.37 &&
-       characters.rightWidth >= characters.viewportWidth * 1.35 && characters.rightWidth <= characters.viewportWidth * 1.37,
-  'Normal portrait characters are not at the refined ~136vw scale', JSON.stringify(characters));
+const expectedNormalWidth = Math.min(
+  Math.max(characters.viewportWidth * 1.36, characters.viewportHeight * 0.72),
+  characters.viewportWidth * 1.65
+);
+assert(Math.abs(characters.leftWidth - expectedNormalWidth) <= 2 && Math.abs(characters.rightWidth - expectedNormalWidth) <= 2,
+  'Normal portrait characters do not use the grounded aspect-aware scale', JSON.stringify({ expectedNormalWidth, characters }));
 assert(Math.abs(characters.leftCenter - characters.viewportWidth * 0.20) <= 3,
   'Left character no longer keeps the desktop horizontal centre', JSON.stringify(characters));
 assert(Math.abs(characters.rightCenter - characters.viewportWidth * 0.80) <= 3,
@@ -144,6 +148,7 @@ const phone = await page.evaluate(async () => {
     rendered,
     sceneId: scene?.id,
     viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
     configuredGap,
     first,
     second
@@ -162,9 +167,12 @@ assert(Math.abs(phone.second.gap - phone.configuredGap) <= 2.5,
   'Phone did not remain anchored after real choices grew the dialogue', JSON.stringify(phone));
 assert(phone.second.phoneTop < phone.first.phoneTop,
   'Phone did not move with the raised real choice stack', JSON.stringify(phone));
-assert(phone.first.characterWidth >= phone.viewportWidth * 1.29 && phone.first.characterWidth <= phone.viewportWidth * 1.31 &&
-       phone.second.characterWidth >= phone.viewportWidth * 1.29 && phone.second.characterWidth <= phone.viewportWidth * 1.31,
-  'Compose character is still using the old 70vw mobile scale', JSON.stringify(phone));
+const expectedComposeWidth = Math.min(
+  Math.max(phone.viewportWidth * 1.30, phone.viewportHeight * 0.68),
+  phone.viewportWidth * 1.60
+);
+assert(Math.abs(phone.first.characterWidth - expectedComposeWidth) <= 2 && Math.abs(phone.second.characterWidth - expectedComposeWidth) <= 2,
+  'Compose character does not use the grounded aspect-aware scale', JSON.stringify({ expectedComposeWidth, phone }));
 assert(Math.abs(phone.first.characterBottom) <= 0.5 && Math.abs(phone.second.characterBottom) <= 0.5 &&
        phone.first.liftVariable === '' && phone.second.liftVariable === '',
   'Compose character floated above the bottom edge while dialogue choices changed', JSON.stringify(phone));
