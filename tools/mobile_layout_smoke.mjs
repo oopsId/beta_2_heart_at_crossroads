@@ -12,7 +12,8 @@ await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() =>
   typeof window.heartSyncMobileLayout === 'function' &&
   typeof window.stage0jRenderSceneVisuals === 'function' &&
-  typeof window.stage0jShowComposeOverlay === 'function'
+  typeof window.stage0jShowComposeOverlay === 'function' &&
+  typeof createChoiceButton === 'function'
 );
 
 const characters = await page.evaluate(async () => {
@@ -30,7 +31,9 @@ const characters = await page.evaluate(async () => {
   const dialogue = document.querySelector('.dialogue-box');
   dialogue.style.display = 'flex';
   dialogue.style.height = '';
+  dialogue.querySelectorAll('.choice-btn').forEach(button => button.remove());
   document.getElementById('dialogue-text').textContent = scene.text.ru;
+  for (const choice of scene.choices || []) dialogue.appendChild(createChoiceButton(choice));
 
   const rendered = await window.stage0jRenderSceneVisuals(scene, 'ru', stats, generation);
   window.heartSyncMobileLayout();
@@ -48,6 +51,8 @@ const characters = await page.evaluate(async () => {
     rendered,
     viewportWidth: innerWidth,
     dialogueTop: dialogueRect.top,
+    dialogueHeight: dialogueRect.height,
+    choiceCount: dialogue.querySelectorAll('.choice-btn').length,
     leftWidth: parseFloat(leftStyle.width),
     rightWidth: parseFloat(rightStyle.width),
     leftBottom: parseFloat(leftStyle.bottom),
@@ -60,6 +65,7 @@ const characters = await page.evaluate(async () => {
 });
 
 assert(characters.rendered === true && characters.compose === false, 'Normal mobile scene did not render', JSON.stringify(characters));
+assert(characters.choiceCount === 3, 'Normal mobile regression is not exercising its real choices', JSON.stringify(characters));
 assert(characters.leftWidth >= characters.viewportWidth * 1.35 && characters.leftWidth <= characters.viewportWidth * 1.37 &&
        characters.rightWidth >= characters.viewportWidth * 1.35 && characters.rightWidth <= characters.viewportWidth * 1.37,
   'Normal portrait characters are not at the refined ~136vw scale', JSON.stringify(characters));
@@ -84,7 +90,8 @@ const phone = await page.evaluate(async () => {
 
   const dialogue = document.querySelector('.dialogue-box');
   dialogue.style.display = 'flex';
-  dialogue.style.height = '220px';
+  dialogue.style.height = '';
+  dialogue.querySelectorAll('.choice-btn').forEach(button => button.remove());
   document.getElementById('dialogue-text').textContent = scene.text.ru;
   const rendered = await window.stage0jRenderSceneVisuals(scene, 'ru', stats, generation);
   const overlay = window.stage0jShowComposeOverlay(scene, generation);
@@ -100,7 +107,9 @@ const phone = await page.evaluate(async () => {
     phoneTop: firstPhone.top,
     phoneBottom: firstPhone.bottom,
     dialogueTop: firstDialogue.top,
+    dialogueHeight: firstDialogue.height,
     gap: firstGap,
+    choiceCount: dialogue.querySelectorAll('.choice-btn').length,
     characterWidth: parseFloat(firstCharacterStyle.width),
     characterBottom: parseFloat(firstCharacterStyle.bottom),
     characterZ: parseInt(firstCharacterStyle.zIndex, 10),
@@ -109,8 +118,8 @@ const phone = await page.evaluate(async () => {
     liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift'))
   };
 
-  dialogue.style.height = '320px';
-  await new Promise(resolve => setTimeout(resolve, 60));
+  for (const choice of scene.choices || []) dialogue.appendChild(createChoiceButton(choice));
+  await new Promise(resolve => setTimeout(resolve, 80));
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
   const secondPhone = overlay.getBoundingClientRect();
@@ -122,7 +131,9 @@ const phone = await page.evaluate(async () => {
     phoneTop: secondPhone.top,
     phoneBottom: secondPhone.bottom,
     dialogueTop: secondDialogue.top,
+    dialogueHeight: secondDialogue.height,
     gap: secondGap,
+    choiceCount: dialogue.querySelectorAll('.choice-btn').length,
     characterWidth: parseFloat(secondCharacterStyle.width),
     characterBottom: parseFloat(secondCharacterStyle.bottom),
     liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift'))
@@ -141,22 +152,24 @@ const phone = await page.evaluate(async () => {
 assert(phone.rendered === true && phone.sceneId === 21, 'Real compose mobile scene did not render', JSON.stringify(phone));
 assert(phone.first.backgroundImage && phone.first.backgroundImage !== 'none',
   'Compose regression scene is not exercising a visible character sprite', JSON.stringify(phone));
+assert(phone.first.choiceCount === 0 && phone.second.choiceCount === 3 && phone.second.dialogueHeight > phone.first.dialogueHeight,
+  'Compose regression did not grow through the real three-choice stack', JSON.stringify(phone));
 assert(phone.first.phoneTop >= 0 && phone.second.phoneTop >= 0, 'Phone anchor moved above the viewport', JSON.stringify(phone));
 assert(Math.abs(phone.first.gap - phone.configuredGap) <= 2.5,
   'Phone bottom is not anchored to the dialogue top', JSON.stringify(phone));
 assert(Math.abs(phone.second.gap - phone.configuredGap) <= 2.5,
-  'Phone did not follow the dialogue when its height changed', JSON.stringify(phone));
+  'Phone did not remain anchored after real choices grew the dialogue', JSON.stringify(phone));
 assert(phone.second.phoneTop < phone.first.phoneTop,
-  'Phone did not move with the raised dialogue strip', JSON.stringify(phone));
+  'Phone did not move with the raised real choice stack', JSON.stringify(phone));
 assert(phone.first.characterWidth >= phone.viewportWidth * 1.29 && phone.first.characterWidth <= phone.viewportWidth * 1.31 &&
        phone.second.characterWidth >= phone.viewportWidth * 1.29 && phone.second.characterWidth <= phone.viewportWidth * 1.31,
   'Compose character is still using the old 70vw mobile scale', JSON.stringify(phone));
-assert(phone.first.characterBottom >= 37 && phone.first.characterBottom <= 85 &&
+assert(phone.first.characterBottom >= 55 && phone.first.characterBottom <= 191 &&
        Math.abs(phone.first.characterBottom - phone.first.liftVariable) <= 1,
-  'Compose character did not receive the stronger dialogue-relative lift', JSON.stringify(phone));
-assert(phone.second.characterBottom > phone.first.characterBottom &&
+  'Compose character did not receive the stronger dialogue-height lift', JSON.stringify(phone));
+assert(phone.second.characterBottom > phone.first.characterBottom && phone.second.characterBottom <= 191 &&
        Math.abs(phone.second.characterBottom - phone.second.liftVariable) <= 1,
-  'Compose character did not rise when the dialogue strip grew upward', JSON.stringify(phone));
+  'Compose character did not rise with the real choice stack', JSON.stringify(phone));
 assert(phone.first.characterZ < phone.first.phoneZ,
   'Compose character must remain behind the smartphone overlay', JSON.stringify(phone));
 assert(phone.first.characterBottom > characters.leftBottom,
