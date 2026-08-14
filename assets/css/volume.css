@@ -1,0 +1,63 @@
+/* Transient desktop master-volume HUD shown while the mouse wheel changes audio level. */
+.heart-volume-hud {
+  position: fixed;
+  top: 50%;
+  right: 22px;
+  z-index: 7000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 42px;
+  padding: 10px 7px;
+  box-sizing: border-box;
+  border: 1px solid rgba(222, 184, 135, 0.5);
+  border-radius: 16px;
+  background: rgba(25, 22, 20, 0.72);
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.28);
+  color: #fff;
+  font: 12px/1 Arial, sans-serif;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-50%) translateX(10px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.heart-volume-hud.is-visible {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.heart-volume-percent {
+  min-width: 34px;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.65);
+}
+
+.heart-volume-track {
+  position: relative;
+  width: 10px;
+  height: 112px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+}
+
+.heart-volume-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #dec99f;
+  transition: height 70ms linear;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .heart-volume-hud {
+    display: none;
+  }
+}
