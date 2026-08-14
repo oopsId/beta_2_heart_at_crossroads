@@ -195,3 +195,64 @@
     window.stage2dRouteStrength=routeStrength;window.stage2dEndingSelectable=stage0iEndingEligible;window.stage2dLegacyEndingEligible=legacyEndingEligible;window.stage2dEndingProfiles=profiles;
     window.heartRouteStrength=routeStrength;window.heartEndingSelectable=stage0iEndingEligible;window.heartEndingProfiles=profiles;
 })();
+
+// Memory tags keep their authored owner in the notification instead of always naming Vika.
+(() => {
+    const ownerNames = {
+        ru: { mark: 'Марк', vika: 'Вика', sergey: 'Сергей', dima: 'Дима', lyosha: 'Лёша' },
+        en: { mark: 'Mark', vika: 'Vika', sergey: 'Sergey', dima: 'Dima', lyosha: 'Lyosha' }
+    };
+
+    function memoryNotificationText(memoryTag, language = stats?.language || 'ru') {
+        const lang = language === 'en' ? 'en' : 'ru';
+        const prefix = String(memoryTag || '').split('_')[0].toLowerCase();
+        const owner = ownerNames[lang][prefix];
+        if (!owner) {
+            return lang === 'ru'
+                ? 'Этот выбор будет иметь последствия'
+                : 'This choice will have consequences';
+        }
+        return lang === 'ru'
+            ? `${owner} запомнит ваш выбор`
+            : `${owner} will remember your choice`;
+    }
+
+    function showMemoryNotification(memoryTag, generation) {
+        const notification = document.createElement('div');
+        notification.className = 'memory-notification';
+        notification.textContent = memoryNotificationText(memoryTag);
+        document.getElementById('game-container').appendChild(notification);
+        runtimeSetTimeout(() => notification.remove(), 3000, generation);
+    }
+
+    const baseSaveChoice = saveChoice;
+    saveChoice = async function heartSaveChoiceWithMemoryOwner(choiceId, effects, memoryTag, options = {}) {
+        const generation = options.generation ?? runtimeGeneration;
+        if (!isRunCurrent(generation)) return false;
+
+        // Keep existing profiles clean even if an older run already accumulated duplicate tags.
+        if (!Array.isArray(stats.memories)) stats.memories = [];
+        if (stats.memories.length > 1) {
+            const uniqueMemories = [...new Set(stats.memories)];
+            stats.memories.splice(0, stats.memories.length, ...uniqueMemories);
+        }
+
+        // Let the original function own choice/effect application, but suppress its hardcoded
+        // "Vika will remember" branch so memory storage and UI are handled correctly here.
+        const saved = await baseSaveChoice(choiceId, effects, null, { ...options, persist: false });
+        if (!saved || !isRunCurrent(generation)) return false;
+
+        if (memoryTag && !stats.memories.includes(memoryTag)) {
+            stats.memories.push(memoryTag);
+            showMemoryNotification(memoryTag, generation);
+        }
+
+        if (options.persist !== false) {
+            await saveSession();
+            if (!isRunCurrent(generation)) return false;
+        }
+        return true;
+    };
+
+    window.heartMemoryNotificationText = memoryNotificationText;
+})();
