@@ -31,14 +31,14 @@ const initial = await page.evaluate(() => {
   stats.relationships.dima = 9;
   stats.relationships.lyosha = 1;
 
+  heartSetDevForceFirstPlaythrough(false);
+  beginRuntimeSession('stats-smoke-normal');
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('game-container').style.display = 'block';
   document.getElementById('menu').style.display = 'flex';
   const button = document.getElementById('stats');
-
-  // Reproduce foundation.js gate for a temporary-password/non-authorized session.
+  const devControl = document.getElementById('stage0k-dev-replay-control');
   button.style.display = 'none';
-  window.heartSetDevForceFirstPlaythrough(false);
   window.heartSyncStatsVisibility();
 
   const directOpen = window.heartShowStatsPanel();
@@ -48,24 +48,40 @@ const initial = await page.evaluate(() => {
     devClass: document.documentElement.classList.contains('heart-dev-first-playthrough'),
     display: getComputedStyle(button).display,
     directOpen,
-    panelExists: Boolean(document.getElementById('stats-panel-overlay'))
+    panelExists: Boolean(document.getElementById('stats-panel-overlay')),
+    devControlVisible: devControl ? devControl.getClientRects().length > 0 : false
   };
 });
 
-if (initial.authorized || initial.forced || initial.devClass || initial.display !== 'none' || initial.directOpen !== false || initial.panelExists) {
-  throw new Error(`unauthorized stats gate is open without DEV checkbox: ${JSON.stringify(initial)}`);
+if (initial.authorized || initial.forced || initial.devClass || initial.display !== 'none' || initial.directOpen !== false || initial.panelExists || initial.devControlVisible) {
+  throw new Error(`unauthorized stats gate is open without a DEV run: ${JSON.stringify(initial)}`);
 }
 
-// DEV checkbox alone must expose the tool while keeping the temporary-password session unauthorized.
-await page.locator('#stage0k-dev-replay-control input[type="checkbox"]').click();
-const devEnabled = await page.evaluate(() => ({
-  authorized: stats.isAuthorized,
-  forced: window.heartDevForceFirstPlaythrough(),
-  devClass: document.documentElement.classList.contains('heart-dev-first-playthrough'),
-  display: getComputedStyle(document.getElementById('stats')).display
-}));
-if (devEnabled.authorized || !devEnabled.forced || !devEnabled.devClass || devEnabled.display === 'none') {
-  throw new Error(`DEV checkbox did not expose stats: ${JSON.stringify(devEnabled)}`);
+// Enable DEV on the menu, then start a runtime. The control itself must disappear with the menu.
+const devEnabled = await page.evaluate(() => {
+  invalidateRuntimeSession('stats-smoke-enable-dev');
+  showStartScreen();
+  const selected = heartSetDevForceFirstPlaythrough(true);
+  const generation = beginRuntimeSession('stats-smoke-dev');
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-container').style.display = 'block';
+  const button = document.getElementById('stats');
+  const devControl = document.getElementById('stage0k-dev-replay-control');
+  button.style.display = 'none';
+  window.heartSyncStatsVisibility();
+  return {
+    selected,
+    generation,
+    authorized: stats.isAuthorized,
+    forced: window.heartDevForceFirstPlaythrough(),
+    devClass: document.documentElement.classList.contains('heart-dev-first-playthrough'),
+    display: getComputedStyle(button).display,
+    devControlVisible: devControl ? devControl.getClientRects().length > 0 : false,
+    attemptedRuntimeChange: heartSetDevForceFirstPlaythrough(false)
+  };
+});
+if (!devEnabled.selected || devEnabled.authorized || !devEnabled.forced || !devEnabled.devClass || devEnabled.display === 'none' || devEnabled.devControlVisible || devEnabled.attemptedRuntimeChange !== false) {
+  throw new Error(`menu-captured DEV mode did not expose stats correctly: ${JSON.stringify(devEnabled)}`);
 }
 
 await page.locator('#stats').click();
@@ -114,15 +130,28 @@ if (await page.locator('#stats-panel-overlay').count()) {
   throw new Error('Escape did not close stats panel');
 }
 
-// Turning DEV off must immediately restore the old password gate.
-await page.locator('#stage0k-dev-replay-control input[type="checkbox"]').click();
-const devDisabled = await page.evaluate(() => ({
-  forced: window.heartDevForceFirstPlaythrough(),
-  devClass: document.documentElement.classList.contains('heart-dev-first-playthrough'),
-  display: getComputedStyle(document.getElementById('stats')).display
-}));
-if (devDisabled.forced || devDisabled.devClass || devDisabled.display !== 'none') {
-  throw new Error(`stats remained visible after DEV checkbox was disabled: ${JSON.stringify(devDisabled)}`);
+// Disable DEV on the menu and start another runtime; stats must close again.
+const devDisabled = await page.evaluate(() => {
+  invalidateRuntimeSession('stats-smoke-disable-dev');
+  showStartScreen();
+  const selected = heartSetDevForceFirstPlaythrough(false);
+  beginRuntimeSession('stats-smoke-normal-again');
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-container').style.display = 'block';
+  const button = document.getElementById('stats');
+  const devControl = document.getElementById('stage0k-dev-replay-control');
+  button.style.display = 'none';
+  window.heartSyncStatsVisibility();
+  return {
+    selected,
+    forced: window.heartDevForceFirstPlaythrough(),
+    devClass: document.documentElement.classList.contains('heart-dev-first-playthrough'),
+    display: getComputedStyle(button).display,
+    devControlVisible: devControl ? devControl.getClientRects().length > 0 : false
+  };
+});
+if (!devDisabled.selected || devDisabled.forced || devDisabled.devClass || devDisabled.display !== 'none' || devDisabled.devControlVisible) {
+  throw new Error(`stats remained visible after a non-DEV menu launch: ${JSON.stringify(devDisabled)}`);
 }
 
 // Main-password authorization keeps the original access semantics even with DEV off.

@@ -3,10 +3,6 @@
     const portraitMobile = window.matchMedia('(max-width: 800px) and (orientation: portrait)');
     let syncFrame = 0;
 
-    function clamp(value, min, max) {
-        return Math.min(max, Math.max(min, value));
-    }
-
     function syncCharacterOffsets() {
         const left = document.getElementById('character-left');
         const right = document.getElementById('character-right');
@@ -43,19 +39,13 @@
         }
 
         const rect = dialogue.getBoundingClientRect();
-        if (!Number.isFinite(rect.top) || !Number.isFinite(rect.height)) return false;
+        if (!Number.isFinite(rect.top)) return false;
 
         const dialogueTop = Math.max(0, rect.top);
         const composeScene = body.classList.contains('stage0j-compose-scene');
-        // Both modes follow the real dialogue height. Normal scenes lift enough to keep
-        // faces above a real choice stack; compose scenes need a stronger correction because
-        // the phone also occupies the space above the strip.
-        const lift = composeScene
-            ? clamp(rect.height * 0.45, 56, 190)
-            : clamp(rect.height * 0.30, 24, 110);
-
         body.style.setProperty('--heart-mobile-dialogue-top', `${dialogueTop.toFixed(2)}px`);
-        body.style.setProperty('--heart-mobile-character-lift', `${lift.toFixed(2)}px`);
+        // Cropped character PNGs must stay bottom:0. Only the phone follows dialogue geometry.
+        body.style.removeProperty('--heart-mobile-character-lift');
 
         if (composeScene) body.style.setProperty('--phone-dialogue-top', `${dialogueTop.toFixed(2)}px`);
         else body.style.removeProperty('--phone-dialogue-top');

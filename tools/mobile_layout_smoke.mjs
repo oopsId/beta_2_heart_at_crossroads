@@ -16,12 +16,13 @@ await page.waitForFunction(() =>
   typeof createChoiceButton === 'function'
 );
 
+// Exact normal scene from the reported mobile-browser screenshot: Anna + Sergey, three choices.
 const characters = await page.evaluate(async () => {
   const generation = beginRuntimeSession('mobile-layout-characters');
   resetGameState(false);
-  currentChapter = 1;
-  scriptData = await (await fetch('assets/data/chapter1.json')).json();
-  const scene = scriptData.scenes.find(candidate => candidate.id === 3);
+  currentChapter = 7;
+  scriptData = await (await fetch('assets/data/chapter7.json')).json();
+  const scene = scriptData.scenes.find(candidate => candidate.id === 12);
 
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('game-container').style.display = 'block';
@@ -49,7 +50,9 @@ const characters = await page.evaluate(async () => {
 
   return {
     rendered,
+    sceneId: scene?.id,
     viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
     dialogueTop: dialogueRect.top,
     dialogueHeight: dialogueRect.height,
     choiceCount: dialogue.querySelectorAll('.choice-btn').length,
@@ -59,24 +62,26 @@ const characters = await page.evaluate(async () => {
     rightBottom: parseFloat(rightStyle.bottom),
     leftCenter: (leftRect.left + leftRect.right) / 2,
     rightCenter: (rightRect.left + rightRect.right) / 2,
-    liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift')),
+    liftVariable: getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift').trim(),
     compose: document.body.classList.contains('stage0j-compose-scene')
   };
 });
 
-assert(characters.rendered === true && characters.compose === false, 'Normal mobile scene did not render', JSON.stringify(characters));
-assert(characters.choiceCount === 3, 'Normal mobile regression is not exercising its real choices', JSON.stringify(characters));
-assert(characters.leftWidth >= characters.viewportWidth * 1.35 && characters.leftWidth <= characters.viewportWidth * 1.37 &&
-       characters.rightWidth >= characters.viewportWidth * 1.35 && characters.rightWidth <= characters.viewportWidth * 1.37,
-  'Normal portrait characters are not at the refined ~136vw scale', JSON.stringify(characters));
+assert(characters.rendered === true && characters.sceneId === 12 && characters.compose === false,
+  'Reported Sergey mobile scene did not render', JSON.stringify(characters));
+assert(characters.choiceCount === 3, 'Reported mobile regression is not exercising its real choices', JSON.stringify(characters));
+const expectedNormalWidth = Math.min(
+  Math.max(characters.viewportWidth * 1.36, characters.viewportHeight * 0.72),
+  characters.viewportWidth * 1.65
+);
+assert(Math.abs(characters.leftWidth - expectedNormalWidth) <= 2 && Math.abs(characters.rightWidth - expectedNormalWidth) <= 2,
+  'Normal portrait characters do not use the grounded aspect-aware scale', JSON.stringify({ expectedNormalWidth, characters }));
 assert(Math.abs(characters.leftCenter - characters.viewportWidth * 0.20) <= 3,
   'Left character no longer keeps the desktop horizontal centre', JSON.stringify(characters));
 assert(Math.abs(characters.rightCenter - characters.viewportWidth * 0.80) <= 3,
   'Right character no longer keeps the desktop horizontal centre', JSON.stringify(characters));
-assert(characters.leftBottom >= 23 && characters.leftBottom <= 111 &&
-       characters.rightBottom >= 23 && characters.rightBottom <= 111 &&
-       Math.abs(characters.leftBottom - characters.liftVariable) <= 1,
-  'Normal portrait characters are not lifted from the real dialogue/choice height', JSON.stringify(characters));
+assert(Math.abs(characters.leftBottom) <= 0.5 && Math.abs(characters.rightBottom) <= 0.5 && characters.liftVariable === '',
+  'Normal portrait characters are floating above the bottom edge', JSON.stringify(characters));
 
 await page.screenshot({ path: 'artifacts/mobile-character-layout.png' });
 
@@ -115,7 +120,7 @@ const phone = await page.evaluate(async () => {
     characterZ: parseInt(firstCharacterStyle.zIndex, 10),
     phoneZ: parseInt(getComputedStyle(overlay).zIndex, 10),
     backgroundImage: firstCharacterStyle.backgroundImage,
-    liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift'))
+    liftVariable: getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift').trim()
   };
 
   for (const choice of scene.choices || []) dialogue.appendChild(createChoiceButton(choice));
@@ -136,13 +141,14 @@ const phone = await page.evaluate(async () => {
     choiceCount: dialogue.querySelectorAll('.choice-btn').length,
     characterWidth: parseFloat(secondCharacterStyle.width),
     characterBottom: parseFloat(secondCharacterStyle.bottom),
-    liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift'))
+    liftVariable: getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift').trim()
   };
 
   return {
     rendered,
     sceneId: scene?.id,
     viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
     configuredGap,
     first,
     second
@@ -161,19 +167,17 @@ assert(Math.abs(phone.second.gap - phone.configuredGap) <= 2.5,
   'Phone did not remain anchored after real choices grew the dialogue', JSON.stringify(phone));
 assert(phone.second.phoneTop < phone.first.phoneTop,
   'Phone did not move with the raised real choice stack', JSON.stringify(phone));
-assert(phone.first.characterWidth >= phone.viewportWidth * 1.29 && phone.first.characterWidth <= phone.viewportWidth * 1.31 &&
-       phone.second.characterWidth >= phone.viewportWidth * 1.29 && phone.second.characterWidth <= phone.viewportWidth * 1.31,
-  'Compose character is still using the old 70vw mobile scale', JSON.stringify(phone));
-assert(phone.first.characterBottom >= 55 && phone.first.characterBottom <= 191 &&
-       Math.abs(phone.first.characterBottom - phone.first.liftVariable) <= 1,
-  'Compose character did not receive the stronger dialogue-height lift', JSON.stringify(phone));
-assert(phone.second.characterBottom > phone.first.characterBottom && phone.second.characterBottom <= 191 &&
-       Math.abs(phone.second.characterBottom - phone.second.liftVariable) <= 1,
-  'Compose character did not rise with the real choice stack', JSON.stringify(phone));
+const expectedComposeWidth = Math.min(
+  Math.max(phone.viewportWidth * 1.30, phone.viewportHeight * 0.68),
+  phone.viewportWidth * 1.60
+);
+assert(Math.abs(phone.first.characterWidth - expectedComposeWidth) <= 2 && Math.abs(phone.second.characterWidth - expectedComposeWidth) <= 2,
+  'Compose character does not use the grounded aspect-aware scale', JSON.stringify({ expectedComposeWidth, phone }));
+assert(Math.abs(phone.first.characterBottom) <= 0.5 && Math.abs(phone.second.characterBottom) <= 0.5 &&
+       phone.first.liftVariable === '' && phone.second.liftVariable === '',
+  'Compose character floated above the bottom edge while dialogue choices changed', JSON.stringify(phone));
 assert(phone.first.characterZ < phone.first.phoneZ,
   'Compose character must remain behind the smartphone overlay', JSON.stringify(phone));
-assert(phone.first.characterBottom > characters.leftBottom,
-  'Compose scene should lift the character more strongly than a normal scene', JSON.stringify({ characters, phone }));
 
 await page.screenshot({ path: 'artifacts/mobile-phone-layout.png' });
 console.log(JSON.stringify({ status: 'PASS', characters, phone }, null, 2));

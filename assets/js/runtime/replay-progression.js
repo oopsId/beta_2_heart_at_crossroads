@@ -2,37 +2,174 @@
 (() => {
     const DEV_FIRST_PLAYTHROUGH_KEY = 'heart_at_crossroads_beta2:dev:force_first_playthrough';
     const DEV_MODE = new URLSearchParams(window.location.search).get('player') !== '1';
+    let activeRunForceFirstPlaythrough = null;
+
     window.heartDevMode = DEV_MODE;
-    function devForceFirstPlaythrough(){return DEV_MODE && localStorage.getItem(DEV_FIRST_PLAYTHROUGH_KEY)==='1'}
-    function setDevForceFirstPlaythrough(enabled){if(!DEV_MODE)return false;if(enabled)localStorage.setItem(DEV_FIRST_PLAYTHROUGH_KEY,'1');else localStorage.removeItem(DEV_FIRST_PLAYTHROUGH_KEY);if(typeof scriptData==='object'&&scriptData)applyReplayOverride(scriptData);return true}
-    function applyReplayOverride(root){const forceFirst=devForceFirstPlaythrough(),seen=new WeakSet();function visit(value){if(!value||typeof value!=='object'||seen.has(value))return;seen.add(value);if(Object.prototype.hasOwnProperty.call(value,'second_playthrough_text')){if(!Object.prototype.hasOwnProperty.call(value,'__heartSecondPlaythroughText'))Object.defineProperty(value,'__heartSecondPlaythroughText',{value:value.second_playthrough_text,writable:true,configurable:true,enumerable:false});if(forceFirst)delete value.second_playthrough_text}else if(!forceFirst&&Object.prototype.hasOwnProperty.call(value,'__heartSecondPlaythroughText'))value.second_playthrough_text=value.__heartSecondPlaythroughText;if(!forceFirst&&Object.prototype.hasOwnProperty.call(value,'__heartSecondPlaythroughText')&&!Object.prototype.hasOwnProperty.call(value,'second_playthrough_text'))value.second_playthrough_text=value.__heartSecondPlaythroughText;if(Array.isArray(value))value.forEach(visit);else Object.values(value).forEach(visit)}visit(root);return root}
-    window.stage0kDevForceFirstPlaythrough=devForceFirstPlaythrough;window.stage0kSetDevForceFirstPlaythrough=setDevForceFirstPlaythrough;window.stage0kApplyReplayOverride=applyReplayOverride;
-    window.heartDevForceFirstPlaythrough=devForceFirstPlaythrough;window.heartSetDevForceFirstPlaythrough=setDevForceFirstPlaythrough;window.heartApplyReplayOverride=applyReplayOverride;
-    function mountDevControl(){if(!DEV_MODE||document.getElementById('stage0k-dev-replay-control'))return;const label=document.createElement('label');label.id='stage0k-dev-replay-control';label.title='Только beta/dev: прохождение остаётся первым и не изменяет completionCount, награду или профиль.';const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=devForceFirstPlaythrough();checkbox.setAttribute('aria-label','DEV: всегда первое прохождение');checkbox.addEventListener('change',()=>setDevForceFirstPlaythrough(checkbox.checked));const text=document.createElement('span');text.textContent='DEV: всегда первое прохождение';label.append(checkbox,text);document.body.appendChild(label)}
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountDevControl,{once:true});else mountDevControl();
-    if(typeof loadChapter==='function'){const base=loadChapter;loadChapter=async function(...args){const ok=await base(...args);if(ok&&typeof scriptData==='object'&&scriptData)applyReplayOverride(scriptData);return ok}}
-    if(typeof showScene==='function'){const base=showScene;showScene=async function(...args){if(typeof scriptData==='object'&&scriptData)applyReplayOverride(scriptData);return await base(...args)}}
-    if(typeof showSceneWithTimer==='function'){const base=showSceneWithTimer;showSceneWithTimer=function(scene,...args){applyReplayOverride(scene);return base(scene,...args)}}
-    if(typeof showEnding==='function'){const base=showEnding;showEnding=function(ending,...args){applyReplayOverride(ending);return base(ending,...args)}}
-    if(typeof showEpilogue==='function'){
-        const base=showEpilogue;
-        showEpilogue=function(epilogueText,generation=runtimeGeneration){
-            if(!devForceFirstPlaythrough())return base(epilogueText,generation);
-            if(!isRunCurrent(generation))return false;
-            const epilogueDiv=document.createElement('div');
-            epilogueDiv.className='epilogue-overlay';
-            epilogueDiv.style.cssText='position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); color: white; display: flex; justify-content: center; align-items: center; text-align: center; padding: 20px; z-index: 10;';
-            epilogueDiv.textContent=epilogueText;
+
+    function menuDevSelection() {
+        return DEV_MODE && localStorage.getItem(DEV_FIRST_PLAYTHROUGH_KEY) === '1';
+    }
+
+    function runtimeIsActive() {
+        return typeof runtimeActive === 'boolean' && runtimeActive;
+    }
+
+    function devForceFirstPlaythrough() {
+        if (!DEV_MODE) return false;
+        return activeRunForceFirstPlaythrough === null
+            ? menuDevSelection()
+            : activeRunForceFirstPlaythrough;
+    }
+
+    function syncDevDependents() {
+        if (typeof window.heartSyncStatsVisibility === 'function') window.heartSyncStatsVisibility();
+    }
+
+    function setDevForceFirstPlaythrough(enabled) {
+        if (!DEV_MODE || runtimeIsActive()) return false;
+        if (enabled) localStorage.setItem(DEV_FIRST_PLAYTHROUGH_KEY, '1');
+        else localStorage.removeItem(DEV_FIRST_PLAYTHROUGH_KEY);
+        if (typeof scriptData === 'object' && scriptData) applyReplayOverride(scriptData);
+        syncDevDependents();
+        return true;
+    }
+
+    function captureRunDevMode() {
+        activeRunForceFirstPlaythrough = menuDevSelection();
+        syncDevDependents();
+        return activeRunForceFirstPlaythrough;
+    }
+
+    function clearRunDevMode() {
+        activeRunForceFirstPlaythrough = null;
+        syncDevDependents();
+    }
+
+    function applyReplayOverride(root) {
+        const forceFirst = devForceFirstPlaythrough();
+        const seen = new WeakSet();
+        function visit(value) {
+            if (!value || typeof value !== 'object' || seen.has(value)) return;
+            seen.add(value);
+            if (Object.prototype.hasOwnProperty.call(value, 'second_playthrough_text')) {
+                if (!Object.prototype.hasOwnProperty.call(value, '__heartSecondPlaythroughText')) {
+                    Object.defineProperty(value, '__heartSecondPlaythroughText', {
+                        value: value.second_playthrough_text,
+                        writable: true,
+                        configurable: true,
+                        enumerable: false
+                    });
+                }
+                if (forceFirst) delete value.second_playthrough_text;
+            } else if (!forceFirst && Object.prototype.hasOwnProperty.call(value, '__heartSecondPlaythroughText')) {
+                value.second_playthrough_text = value.__heartSecondPlaythroughText;
+            }
+            if (!forceFirst && Object.prototype.hasOwnProperty.call(value, '__heartSecondPlaythroughText') && !Object.prototype.hasOwnProperty.call(value, 'second_playthrough_text')) {
+                value.second_playthrough_text = value.__heartSecondPlaythroughText;
+            }
+            if (Array.isArray(value)) value.forEach(visit);
+            else Object.values(value).forEach(visit);
+        }
+        visit(root);
+        return root;
+    }
+
+    window.stage0kDevForceFirstPlaythrough = devForceFirstPlaythrough;
+    window.stage0kSetDevForceFirstPlaythrough = setDevForceFirstPlaythrough;
+    window.stage0kApplyReplayOverride = applyReplayOverride;
+    window.heartDevForceFirstPlaythrough = devForceFirstPlaythrough;
+    window.heartSetDevForceFirstPlaythrough = setDevForceFirstPlaythrough;
+    window.heartApplyReplayOverride = applyReplayOverride;
+
+    function mountDevControl() {
+        if (!DEV_MODE || document.getElementById('stage0k-dev-replay-control')) return;
+        const host = document.getElementById('start-screen');
+        if (!host) return;
+        const label = document.createElement('label');
+        label.id = 'stage0k-dev-replay-control';
+        label.title = 'Только beta/dev: прохождение остаётся первым и не изменяет completionCount, награду или профиль.';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = menuDevSelection();
+        checkbox.setAttribute('aria-label', 'DEV: всегда первое прохождение');
+        checkbox.addEventListener('change', () => {
+            const changed = setDevForceFirstPlaythrough(checkbox.checked);
+            if (!changed) checkbox.checked = devForceFirstPlaythrough();
+        });
+        const text = document.createElement('span');
+        text.textContent = 'DEV: всегда первое прохождение';
+        label.append(checkbox, text);
+        host.appendChild(label);
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountDevControl, { once: true });
+    else mountDevControl();
+
+    if (typeof beginRuntimeSession === 'function') {
+        const base = beginRuntimeSession;
+        beginRuntimeSession = function(...args) {
+            captureRunDevMode();
+            return base(...args);
+        };
+    }
+
+    if (typeof invalidateRuntimeSession === 'function') {
+        const base = invalidateRuntimeSession;
+        invalidateRuntimeSession = function(...args) {
+            const result = base(...args);
+            clearRunDevMode();
+            return result;
+        };
+    }
+
+    if (typeof loadChapter === 'function') {
+        const base = loadChapter;
+        loadChapter = async function(...args) {
+            const ok = await base(...args);
+            if (ok && typeof scriptData === 'object' && scriptData) applyReplayOverride(scriptData);
+            return ok;
+        };
+    }
+    if (typeof showScene === 'function') {
+        const base = showScene;
+        showScene = async function(...args) {
+            if (typeof scriptData === 'object' && scriptData) applyReplayOverride(scriptData);
+            return await base(...args);
+        };
+    }
+    if (typeof showSceneWithTimer === 'function') {
+        const base = showSceneWithTimer;
+        showSceneWithTimer = function(scene, ...args) {
+            applyReplayOverride(scene);
+            return base(scene, ...args);
+        };
+    }
+    if (typeof showEnding === 'function') {
+        const base = showEnding;
+        showEnding = function(ending, ...args) {
+            applyReplayOverride(ending);
+            return base(ending, ...args);
+        };
+    }
+    if (typeof showEpilogue === 'function') {
+        const base = showEpilogue;
+        showEpilogue = function(epilogueText, generation = runtimeGeneration) {
+            if (!devForceFirstPlaythrough()) return base(epilogueText, generation);
+            if (!isRunCurrent(generation)) return false;
+            const epilogueDiv = document.createElement('div');
+            epilogueDiv.className = 'epilogue-overlay';
+            epilogueDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); color: white; display: flex; justify-content: center; align-items: center; text-align: center; padding: 20px; z-index: 10;';
+            epilogueDiv.textContent = epilogueText;
             document.body.appendChild(epilogueDiv);
-            runtimeSetTimeout(async()=>{
-                if(!isRunCurrent(generation))return;
+            runtimeSetTimeout(async () => {
+                if (!isRunCurrent(generation)) return;
                 epilogueDiv.remove();
                 await deleteRun();
-                if(!isRunCurrent(generation))return;
+                if (!isRunCurrent(generation)) return;
                 invalidateRuntimeSession('ending-complete-dev-first');
                 resetGameState(false);
                 showStartScreen();
-            },5000,generation);
+            }, 5000, generation);
             return true;
         };
     }
