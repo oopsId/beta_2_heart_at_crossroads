@@ -78,9 +78,9 @@ const phone = await page.evaluate(async () => {
   invalidateRuntimeSession('mobile-layout-characters-done');
   const generation = beginRuntimeSession('mobile-layout-phone');
   resetGameState(false);
-  currentChapter = 2;
-  scriptData = await (await fetch('assets/data/chapter2.json')).json();
-  const scene = scriptData.scenes.find(candidate => candidate.id === 1);
+  currentChapter = 1;
+  scriptData = await (await fetch('assets/data/chapter1.json')).json();
+  const scene = scriptData.scenes.find(candidate => candidate.id === 21);
 
   const dialogue = document.querySelector('.dialogue-box');
   dialogue.style.display = 'flex';
@@ -91,7 +91,7 @@ const phone = await page.evaluate(async () => {
   window.heartSyncMobileLayout();
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-  const character = document.getElementById('character-right');
+  const character = document.getElementById('character-left');
   const firstPhone = overlay.getBoundingClientRect();
   const firstDialogue = dialogue.getBoundingClientRect();
   const firstCharacterStyle = getComputedStyle(character);
@@ -105,6 +105,7 @@ const phone = await page.evaluate(async () => {
     characterBottom: parseFloat(firstCharacterStyle.bottom),
     characterZ: parseInt(firstCharacterStyle.zIndex, 10),
     phoneZ: parseInt(getComputedStyle(overlay).zIndex, 10),
+    backgroundImage: firstCharacterStyle.backgroundImage,
     liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift'))
   };
 
@@ -129,6 +130,7 @@ const phone = await page.evaluate(async () => {
 
   return {
     rendered,
+    sceneId: scene?.id,
     viewportWidth: innerWidth,
     configuredGap,
     first,
@@ -136,7 +138,9 @@ const phone = await page.evaluate(async () => {
   };
 });
 
-assert(phone.rendered === true, 'Compose mobile scene did not render', JSON.stringify(phone));
+assert(phone.rendered === true && phone.sceneId === 21, 'Real compose mobile scene did not render', JSON.stringify(phone));
+assert(phone.first.backgroundImage && phone.first.backgroundImage !== 'none',
+  'Compose regression scene is not exercising a visible character sprite', JSON.stringify(phone));
 assert(phone.first.phoneTop >= 0 && phone.second.phoneTop >= 0, 'Phone anchor moved above the viewport', JSON.stringify(phone));
 assert(Math.abs(phone.first.gap - phone.configuredGap) <= 2.5,
   'Phone bottom is not anchored to the dialogue top', JSON.stringify(phone));
