@@ -10,6 +10,7 @@ EXPECTED_CSS = [
     "assets/css/game.css",
     "assets/css/hud.css",
     "assets/css/phone.css",
+    "assets/css/volume.css",
 ]
 EXPECTED_VENDOR_JS = [
     "assets/vendor/gsap-3.11.5.min.js",
