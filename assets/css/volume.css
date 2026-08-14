@@ -1,8 +1,8 @@
-/* Transient desktop master-volume HUD shown while the mouse wheel changes audio level. */
+/* Transient desktop master-volume HUD shown at the mouse cursor while the wheel changes audio level. */
 .heart-volume-hud {
   position: fixed;
-  top: 50%;
-  right: 22px;
+  left: 0;
+  top: 0;
   z-index: 7000;
   display: flex;
   flex-direction: column;
@@ -20,13 +20,14 @@
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(-50%) translateX(10px);
+  transform: translate(-50%, -50%) scale(0.96);
+  transform-origin: center;
   transition: opacity 140ms ease, transform 140ms ease;
 }
 
 .heart-volume-hud.is-visible {
   opacity: 1;
-  transform: translateY(-50%) translateX(0);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .heart-volume-percent {
