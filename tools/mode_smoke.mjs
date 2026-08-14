@@ -154,5 +154,49 @@ if (!normalRun.disabled || normalRun.forced || normalRun.attemptedChange !== fal
   throw new Error(`unchecked menu did not produce a frozen normal runtime: ${JSON.stringify(normalRun)}`);
 }
 
-console.log(JSON.stringify({ status: 'PASS', specialState, activeSnapshot, playerState, beforeCompletion, afterCompletion, normalRun }, null, 2));
+// Memory tags must name their authored owner instead of hardcoding Vika, and duplicates stay unique.
+const memoryNotifications = await special.evaluate(async () => {
+  stats.language = 'ru';
+  stats.memories = [];
+  document.querySelectorAll('.memory-notification').forEach(node => node.remove());
+
+  const cases = [
+    ['mark_remembers_tease', 'Марк запомнит ваш выбор'],
+    ['vika_remembers_honest', 'Вика запомнит ваш выбор'],
+    ['sergey_remembers_polite', 'Сергей запомнит ваш выбор'],
+    ['dima_remembers_test', 'Дима запомнит ваш выбор'],
+    ['lyosha_remembers_yes', 'Лёша запомнит ваш выбор'],
+    ['future_remembers_test', 'Этот выбор будет иметь последствия']
+  ];
+  const rendered = [];
+
+  for (const [tag] of cases) {
+    document.querySelectorAll('.memory-notification').forEach(node => node.remove());
+    await saveChoice(`memory-smoke-${tag}`, null, tag, { persist: false });
+    rendered.push(document.querySelector('.memory-notification')?.textContent || null);
+  }
+
+  document.querySelectorAll('.memory-notification').forEach(node => node.remove());
+  await saveChoice('memory-smoke-duplicate', null, 'mark_remembers_tease', { persist: false });
+
+  return {
+    expected: cases.map(([, text]) => text),
+    rendered,
+    memories: [...stats.memories],
+    markCount: stats.memories.filter(tag => tag === 'mark_remembers_tease').length,
+    duplicateNotification: Boolean(document.querySelector('.memory-notification')),
+    english: heartMemoryNotificationText('sergey_remembers_polite', 'en')
+  };
+});
+if (JSON.stringify(memoryNotifications.rendered) !== JSON.stringify(memoryNotifications.expected)) {
+  throw new Error(`memory notification owner drifted: ${JSON.stringify(memoryNotifications)}`);
+}
+if (memoryNotifications.markCount !== 1 || memoryNotifications.duplicateNotification) {
+  throw new Error(`memory tags were duplicated or duplicate notification repeated: ${JSON.stringify(memoryNotifications)}`);
+}
+if (memoryNotifications.english !== 'Sergey will remember your choice') {
+  throw new Error(`English memory notification drifted: ${JSON.stringify(memoryNotifications)}`);
+}
+
+console.log(JSON.stringify({ status: 'PASS', specialState, activeSnapshot, playerState, beforeCompletion, afterCompletion, normalRun, memoryNotifications }, null, 2));
 await browser.close();
