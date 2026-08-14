@@ -142,7 +142,6 @@ const authorized = await page.evaluate(() => {
 if (!authorized.authorized || authorized.forced || authorized.display === 'none' || !authorized.opened || !authorized.panelExists) {
   throw new Error(`main-password authorization no longer exposes stats: ${JSON.stringify(authorized)}`);
 }
-window;
 await page.keyboard.press('Escape');
 
 if (browserDialogs !== 0) {
