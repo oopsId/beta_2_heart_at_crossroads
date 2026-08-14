@@ -119,6 +119,19 @@
         return true;
     }
 
+    function installMenuLifecycleClose() {
+        const startScreen = document.getElementById('start-screen');
+        if (!startScreen || typeof MutationObserver !== 'function') return;
+
+        const closeIfStartScreenVisible = () => {
+            if (startScreen.getClientRects().length > 0) closeStatsPanel();
+        };
+
+        const observer = new MutationObserver(closeIfStartScreenVisible);
+        observer.observe(startScreen, { attributes: true, attributeFilter: ['style', 'class'] });
+        closeIfStartScreenVisible();
+    }
+
     function installStatsButton() {
         const original = document.getElementById('stats');
         if (!original) return;
@@ -138,6 +151,7 @@
         }
 
         syncStatsDevVisibility();
+        installMenuLifecycleClose();
         const devCheckbox = document.querySelector('#stage0k-dev-replay-control input[type="checkbox"]');
         devCheckbox?.addEventListener('change', syncStatsDevVisibility);
     }

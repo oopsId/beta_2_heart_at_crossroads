@@ -125,9 +125,19 @@ if (browserDialogs !== 0) {
   throw new Error(`stats click opened ${browserDialogs} browser dialog(s)`);
 }
 
-await page.keyboard.press('Escape');
-if (await page.locator('#stats-panel-overlay').count()) {
-  throw new Error('Escape did not close stats panel');
+// Reproduce the reported lifecycle: leave gameplay for the start screen while the panel is open.
+const menuReturn = await page.evaluate(async () => {
+  invalidateRuntimeSession('stats-smoke-menu-return');
+  showStartScreen();
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const startScreen = document.getElementById('start-screen');
+  return {
+    panelExists: Boolean(document.getElementById('stats-panel-overlay')),
+    startVisible: startScreen.getClientRects().length > 0
+  };
+});
+if (menuReturn.panelExists || !menuReturn.startVisible) {
+  throw new Error(`stats panel survived return to the start screen: ${JSON.stringify(menuReturn)}`);
 }
 
 // Disable DEV on the menu and start another runtime; stats must close again.
@@ -177,5 +187,5 @@ if (browserDialogs !== 0) {
   throw new Error(`stats flow opened ${browserDialogs} browser dialog(s)`);
 }
 
-console.log(JSON.stringify({ status: 'PASS', initial, devEnabled, panel, devDisabled, authorized, browserDialogs }, null, 2));
+console.log(JSON.stringify({ status: 'PASS', initial, devEnabled, panel, menuReturn, devDisabled, authorized, browserDialogs }, null, 2));
 await browser.close();
