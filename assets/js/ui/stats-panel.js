@@ -1,7 +1,23 @@
-// Developer/player stats panel. Replaces the legacy browser alert with in-game UI.
+// Developer/player stats panel. Replaces the legacy browser alert with compact in-game UI.
 (() => {
     function isRu() {
         return typeof stats !== 'undefined' && stats.language !== 'en';
+    }
+
+    function isDevStatsEnabled() {
+        return window.heartDevMode === true
+            && typeof window.heartDevForceFirstPlaythrough === 'function'
+            && window.heartDevForceFirstPlaythrough();
+    }
+
+    function canShowStats() {
+        const authorized = typeof stats !== 'undefined' && stats.isAuthorized === true;
+        return authorized || isDevStatsEnabled();
+    }
+
+    function syncStatsDevVisibility() {
+        document.documentElement.classList.toggle('heart-dev-first-playthrough', isDevStatsEnabled());
+        if (!canShowStats()) closeStatsPanel();
     }
 
     function statSnapshot() {
@@ -45,6 +61,7 @@
 
     function showStatsPanel() {
         closeStatsPanel();
+        if (!canShowStats()) return false;
 
         const ru = isRu();
         const snapshot = statSnapshot();
@@ -56,7 +73,7 @@
         const panel = document.createElement('section');
         panel.className = 'stats-panel';
         panel.setAttribute('role', 'dialog');
-        panel.setAttribute('aria-modal', 'true');
+        panel.setAttribute('aria-modal', 'false');
         panel.setAttribute('aria-labelledby', 'stats-panel-title');
 
         const header = document.createElement('div');
@@ -75,7 +92,7 @@
         header.append(title, close);
 
         const primary = document.createElement('div');
-        primary.className = 'stats-panel-section';
+        primary.className = 'stats-panel-section stats-panel-primary';
         primary.append(
             createValueRow(ru ? 'Короны' : 'Crowns', snapshot.crown),
             createValueRow(ru ? 'Сердце' : 'Heart', snapshot.heart),
@@ -97,11 +114,9 @@
 
         panel.append(header, primary, relationsTitle, relationships);
         overlay.appendChild(panel);
-        overlay.addEventListener('click', event => {
-            if (event.target === overlay) closeStatsPanel();
-        });
         document.body.appendChild(overlay);
         close.focus();
+        return true;
     }
 
     function installStatsButton() {
@@ -121,6 +136,10 @@
         if (window.heartDevMode === true) {
             document.documentElement.classList.add('heart-dev-mode');
         }
+
+        syncStatsDevVisibility();
+        const devCheckbox = document.querySelector('#stage0k-dev-replay-control input[type="checkbox"]');
+        devCheckbox?.addEventListener('change', syncStatsDevVisibility);
     }
 
     document.addEventListener('keydown', event => {
@@ -132,4 +151,5 @@
     document.addEventListener('DOMContentLoaded', installStatsButton);
     window.heartShowStatsPanel = showStatsPanel;
     window.heartCloseStatsPanel = closeStatsPanel;
+    window.heartSyncStatsVisibility = syncStatsDevVisibility;
 })();
