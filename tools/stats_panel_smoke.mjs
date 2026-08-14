@@ -26,6 +26,8 @@ const before = await page.evaluate(() => {
   stats.relationships.dima = 9;
   stats.relationships.lyosha = 1;
 
+  document.getElementById('start-screen').style.display = 'none';
+  document.getElementById('game-container').style.display = 'block';
   const menu = document.getElementById('menu');
   const button = document.getElementById('stats');
   menu.style.display = 'flex';
