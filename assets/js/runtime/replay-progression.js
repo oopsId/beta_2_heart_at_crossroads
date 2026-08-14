@@ -8,12 +8,34 @@
     function applyReplayOverride(root){const forceFirst=devForceFirstPlaythrough(),seen=new WeakSet();function visit(value){if(!value||typeof value!=='object'||seen.has(value))return;seen.add(value);if(Object.prototype.hasOwnProperty.call(value,'second_playthrough_text')){if(!Object.prototype.hasOwnProperty.call(value,'__heartSecondPlaythroughText'))Object.defineProperty(value,'__heartSecondPlaythroughText',{value:value.second_playthrough_text,writable:true,configurable:true,enumerable:false});if(forceFirst)delete value.second_playthrough_text}else if(!forceFirst&&Object.prototype.hasOwnProperty.call(value,'__heartSecondPlaythroughText'))value.second_playthrough_text=value.__heartSecondPlaythroughText;if(!forceFirst&&Object.prototype.hasOwnProperty.call(value,'__heartSecondPlaythroughText')&&!Object.prototype.hasOwnProperty.call(value,'second_playthrough_text'))value.second_playthrough_text=value.__heartSecondPlaythroughText;if(Array.isArray(value))value.forEach(visit);else Object.values(value).forEach(visit)}visit(root);return root}
     window.stage0kDevForceFirstPlaythrough=devForceFirstPlaythrough;window.stage0kSetDevForceFirstPlaythrough=setDevForceFirstPlaythrough;window.stage0kApplyReplayOverride=applyReplayOverride;
     window.heartDevForceFirstPlaythrough=devForceFirstPlaythrough;window.heartSetDevForceFirstPlaythrough=setDevForceFirstPlaythrough;window.heartApplyReplayOverride=applyReplayOverride;
-    function mountDevControl(){if(!DEV_MODE||document.getElementById('stage0k-dev-replay-control'))return;const label=document.createElement('label');label.id='stage0k-dev-replay-control';label.title='Только beta/dev: не изменяет completionCount и настоящий профиль.';const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=devForceFirstPlaythrough();checkbox.setAttribute('aria-label','Игнорировать текст повторного прохождения');checkbox.addEventListener('change',()=>setDevForceFirstPlaythrough(checkbox.checked));const text=document.createElement('span');text.textContent='DEV: обычный текст (без replay)';label.append(checkbox,text);document.body.appendChild(label)}
+    function mountDevControl(){if(!DEV_MODE||document.getElementById('stage0k-dev-replay-control'))return;const label=document.createElement('label');label.id='stage0k-dev-replay-control';label.title='Только beta/dev: прохождение остаётся первым и не изменяет completionCount, награду или профиль.';const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=devForceFirstPlaythrough();checkbox.setAttribute('aria-label','DEV: всегда первое прохождение');checkbox.addEventListener('change',()=>setDevForceFirstPlaythrough(checkbox.checked));const text=document.createElement('span');text.textContent='DEV: всегда первое прохождение';label.append(checkbox,text);document.body.appendChild(label)}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountDevControl,{once:true});else mountDevControl();
     if(typeof loadChapter==='function'){const base=loadChapter;loadChapter=async function(...args){const ok=await base(...args);if(ok&&typeof scriptData==='object'&&scriptData)applyReplayOverride(scriptData);return ok}}
     if(typeof showScene==='function'){const base=showScene;showScene=async function(...args){if(typeof scriptData==='object'&&scriptData)applyReplayOverride(scriptData);return await base(...args)}}
     if(typeof showSceneWithTimer==='function'){const base=showSceneWithTimer;showSceneWithTimer=function(scene,...args){applyReplayOverride(scene);return base(scene,...args)}}
     if(typeof showEnding==='function'){const base=showEnding;showEnding=function(ending,...args){applyReplayOverride(ending);return base(ending,...args)}}
+    if(typeof showEpilogue==='function'){
+        const base=showEpilogue;
+        showEpilogue=function(epilogueText,generation=runtimeGeneration){
+            if(!devForceFirstPlaythrough())return base(epilogueText,generation);
+            if(!isRunCurrent(generation))return false;
+            const epilogueDiv=document.createElement('div');
+            epilogueDiv.className='epilogue-overlay';
+            epilogueDiv.style.cssText='position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); color: white; display: flex; justify-content: center; align-items: center; text-align: center; padding: 20px; z-index: 10;';
+            epilogueDiv.textContent=epilogueText;
+            document.body.appendChild(epilogueDiv);
+            runtimeSetTimeout(async()=>{
+                if(!isRunCurrent(generation))return;
+                epilogueDiv.remove();
+                await deleteRun();
+                if(!isRunCurrent(generation))return;
+                invalidateRuntimeSession('ending-complete-dev-first');
+                resetGameState(false);
+                showStartScreen();
+            },5000,generation);
+            return true;
+        };
+    }
 })();
 
 // Stage 2D: final choice is always selectable; prior history grades the route instead of locking it.

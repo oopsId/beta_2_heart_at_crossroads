@@ -17,7 +17,7 @@
     saveSession=async function stage2dSaveSession(...args){writeBank(stats.diamonds);return await baseSaveSession(...args)};
     let pendingCompletion=null;
     const baseShowEpilogue=showEpilogue;
-    showEpilogue=function stage2dShowEpilogue(...args){pendingCompletion={completionCount:Number(stats.completionCount)||0};return baseShowEpilogue(...args)};
+    showEpilogue=function stage2dShowEpilogue(...args){if(window.heartDevForceFirstPlaythrough?.()){pendingCompletion=null;return baseShowEpilogue(...args)}pendingCompletion={completionCount:Number(stats.completionCount)||0};return baseShowEpilogue(...args)};
     const baseSaveProfile=saveProfile;
     saveProfile=async function stage2dSaveProfile(...args){if(pendingCompletion&&Number(stats.completionCount)>pendingCompletion.completionCount){stats.diamonds=Math.max(0,Number(stats.diamonds)||0)+COMPLETION_REWARD;updateDiamondsDisplay();pendingCompletion=null}writeBank(stats.diamonds);return await baseSaveProfile(...args)};
     window.stage0oInitialDiamonds=INITIAL_DIAMONDS;window.stage0oCompletionReward=COMPLETION_REWARD;window.stage0oReadDiamondBank=readBank;window.stage0oWriteDiamondBank=writeBank;window.stage2dEconomy=economy;window.stage2dReadDiamondBank=readBank;window.stage2dWriteDiamondBank=writeBank;
