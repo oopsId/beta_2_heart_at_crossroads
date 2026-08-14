@@ -4,32 +4,9 @@ const browser = await chromium.launch({ headless: true });
 const base = process.env.GAME_URL || 'http://127.0.0.1:8000/heart_at_crossroads.html';
 const devKey = 'heart_at_crossroads_beta2:dev:force_first_playthrough';
 
-// Direct game URL remains normal player mode even if an old developer flag exists.
-const normal = await browser.newPage();
-await normal.goto(base, { waitUntil: 'domcontentloaded' });
-await normal.evaluate(key => localStorage.setItem(key, '1'), devKey);
-await normal.reload({ waitUntil: 'domcontentloaded' });
-const normalState = await normal.evaluate(async () => {
-  const chapter = await (await fetch('assets/data/chapter2.json')).json();
-  const scene = chapter.scenes.find(item => item.id === 1);
-  heartApplyReplayOverride(chapter);
-  return {
-    mode: window.heartDevMode,
-    control: !!document.getElementById('stage0k-dev-replay-control'),
-    forced: heartDevForceFirstPlaythrough(),
-    replayTextPresent: Object.prototype.hasOwnProperty.call(scene, 'second_playthrough_text')
-  };
-});
-if (normalState.mode || normalState.control || normalState.forced || !normalState.replayTextPresent) {
-  throw new Error(`normal player affected by stored developer flag: ${JSON.stringify(normalState)}`);
-}
-await normal.close();
-
-// The beta entry point is explicitly developer mode and exposes the persistent checkbox.
-const betaEntry = new URL('index.html', base);
+// beta_2 is a developer build: the checkbox must be visible even on the direct game URL.
 const special = await browser.newPage();
-await special.goto(betaEntry.href, { waitUntil: 'domcontentloaded' });
-await special.waitForURL(url => url.pathname.endsWith('/heart_at_crossroads.html') && url.searchParams.get('dev') === '1');
+await special.goto(base, { waitUntil: 'domcontentloaded' });
 const specialState = await special.evaluate(async () => {
   const enabled = heartSetDevForceFirstPlaythrough(true);
   const chapter = await (await fetch('assets/data/chapter2.json')).json();
@@ -45,11 +22,34 @@ const specialState = await special.evaluate(async () => {
   };
 });
 if (!specialState.mode || !specialState.control || !specialState.enabled || !specialState.forced || specialState.replayTextPresent) {
-  throw new Error(`developer first-playthrough override did not activate: ${JSON.stringify(specialState)}`);
+  throw new Error(`default beta developer mode did not activate: ${JSON.stringify(specialState)}`);
 }
 if (!specialState.label?.includes('всегда первое прохождение')) {
   throw new Error(`developer checkbox label drifted: ${JSON.stringify(specialState)}`);
 }
+
+// A clean player preview still exists, but only when it is explicitly requested.
+const playerUrl = new URL(base);
+playerUrl.searchParams.set('player', '1');
+const player = await browser.newPage();
+await player.goto(playerUrl.href, { waitUntil: 'domcontentloaded' });
+await player.evaluate(key => localStorage.setItem(key, '1'), devKey);
+await player.reload({ waitUntil: 'domcontentloaded' });
+const playerState = await player.evaluate(async () => {
+  const chapter = await (await fetch('assets/data/chapter2.json')).json();
+  const scene = chapter.scenes.find(item => item.id === 1);
+  heartApplyReplayOverride(chapter);
+  return {
+    mode: window.heartDevMode,
+    control: !!document.getElementById('stage0k-dev-replay-control'),
+    forced: heartDevForceFirstPlaythrough(),
+    replayTextPresent: Object.prototype.hasOwnProperty.call(scene, 'second_playthrough_text')
+  };
+});
+if (playerState.mode || playerState.control || playerState.forced || !playerState.replayTextPresent) {
+  throw new Error(`explicit player mode affected by developer flag: ${JSON.stringify(playerState)}`);
+}
+await player.close();
 
 // Finishing a run with the checkbox enabled must not turn the profile into replay mode
 // and must not grant the normal +100 completion reward.
@@ -90,7 +90,6 @@ const afterCompletion = await special.evaluate(async () => {
   return {
     completionCount: stats.completionCount,
     profileCompletionCount: profile?.completionCount ?? 0,
-    profileExists: Boolean(profile),
     runExists: Boolean(rawRun),
     bank: stage2dReadDiamondBank(),
     forced: heartDevForceFirstPlaythrough(),
@@ -111,5 +110,5 @@ if (!afterCompletion.forced || afterCompletion.replayTextPresent) {
   throw new Error(`developer completion stopped forcing first-playthrough text: ${JSON.stringify(afterCompletion)}`);
 }
 
-console.log(JSON.stringify({ status: 'PASS', normalState, specialState, beforeCompletion, afterCompletion }, null, 2));
+console.log(JSON.stringify({ status: 'PASS', specialState, playerState, beforeCompletion, afterCompletion }, null, 2));
 await browser.close();

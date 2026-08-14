@@ -1,7 +1,7 @@
 // Replay text developer override.
 (() => {
     const DEV_FIRST_PLAYTHROUGH_KEY = 'heart_at_crossroads_beta2:dev:force_first_playthrough';
-    const DEV_MODE = new URLSearchParams(window.location.search).get('dev') === '1';
+    const DEV_MODE = new URLSearchParams(window.location.search).get('player') !== '1';
     window.heartDevMode = DEV_MODE;
     function devForceFirstPlaythrough(){return DEV_MODE && localStorage.getItem(DEV_FIRST_PLAYTHROUGH_KEY)==='1'}
     function setDevForceFirstPlaythrough(enabled){if(!DEV_MODE)return false;if(enabled)localStorage.setItem(DEV_FIRST_PLAYTHROUGH_KEY,'1');else localStorage.removeItem(DEV_FIRST_PLAYTHROUGH_KEY);if(typeof scriptData==='object'&&scriptData)applyReplayOverride(scriptData);return true}
