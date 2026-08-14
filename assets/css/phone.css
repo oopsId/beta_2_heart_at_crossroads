@@ -1,6 +1,7 @@
 /* Phone layout owns phone geometry; the authored VN dialogue strip remains in hud.css. */
 html body.stage0j-compose-scene {
-  --phone-overlay-top: 4px;
+  --phone-overlay-min-top: 4px;
+  --phone-overlay-top: var(--phone-overlay-min-top);
   --phone-overlay-height: min(430px, calc(80vh - 166px));
   --phone-overlay-gap: 12px;
 }
@@ -10,11 +11,23 @@ html body.stage0j-compose-scene #phone-compose-overlay {
 }
 @media (max-width: 800px) {
   html body.stage0j-compose-scene {
-    --phone-overlay-top: 4px;
+    --phone-overlay-min-top: 4px;
     --phone-overlay-height: min(350px, 48vh, calc(80vh - 164px));
     --phone-overlay-gap: 10px;
   }
 }
+
+/* Portrait phone sits immediately above the real dialogue strip, even when choices change its height. */
+@media (max-width: 800px) and (orientation: portrait) {
+  html body.stage0j-compose-scene {
+    --phone-dialogue-top-fallback: calc(var(--phone-overlay-min-top) + var(--phone-overlay-height) + var(--phone-overlay-gap));
+    --phone-overlay-top: max(
+      var(--phone-overlay-min-top),
+      calc(var(--phone-dialogue-top, var(--phone-dialogue-top-fallback)) - var(--phone-overlay-height) - var(--phone-overlay-gap))
+    );
+  }
+}
+
 @media (max-height: 760px) {
   html body.stage0j-compose-scene {
     --phone-overlay-height: min(300px, 36vh) !important;
