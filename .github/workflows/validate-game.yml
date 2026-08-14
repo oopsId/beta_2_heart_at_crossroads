@@ -67,6 +67,7 @@ jobs:
           node tools/mode_smoke.mjs | tee artifacts/mode-smoke.json
           node tools/stats_panel_smoke.mjs | tee artifacts/stats-panel-smoke.json
           node tools/mobile_layout_smoke.mjs | tee artifacts/mobile-layout-smoke.json
+          node tools/volume_smoke.mjs | tee artifacts/volume-smoke.json
           node tools/gallery_smoke.mjs | tee artifacts/gallery-smoke.json
           node tools/stage0o_smoke.mjs | tee artifacts/stage0o-smoke.json
           node tools/stage0o_continue_smoke.mjs
@@ -86,6 +87,7 @@ jobs:
             artifacts/mobile-layout-smoke.json
             artifacts/mobile-character-layout.png
             artifacts/mobile-phone-layout.png
+            artifacts/volume-smoke.json
             artifacts/gallery-smoke.json
             artifacts/stage0o-smoke.json
           if-no-files-found: ignore
