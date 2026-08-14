@@ -7,7 +7,6 @@ const url = process.env.GAME_URL || 'http://127.0.0.1:8000/heart_at_crossroads.h
 const assert = (condition, message, details = '') => {
   if (!condition) throw new Error(`${message}${details ? `: ${details}` : ''}`);
 };
-const frames = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.waitForFunction(() =>
@@ -28,7 +27,9 @@ const characters = await page.evaluate(async () => {
   document.getElementById('background').style.display = 'block';
   document.getElementById('character-left').style.display = 'block';
   document.getElementById('character-right').style.display = 'block';
-  document.querySelector('.dialogue-box').style.display = 'flex';
+  const dialogue = document.querySelector('.dialogue-box');
+  dialogue.style.display = 'flex';
+  dialogue.style.height = '';
   document.getElementById('dialogue-text').textContent = scene.text.ru;
 
   const rendered = await window.stage0jRenderSceneVisuals(scene, 'ru', stats, generation);
@@ -39,27 +40,37 @@ const characters = await page.evaluate(async () => {
   const right = document.getElementById('character-right');
   const leftRect = left.getBoundingClientRect();
   const rightRect = right.getBoundingClientRect();
+  const dialogueRect = dialogue.getBoundingClientRect();
   const leftStyle = getComputedStyle(left);
   const rightStyle = getComputedStyle(right);
 
   return {
     rendered,
     viewportWidth: innerWidth,
+    dialogueTop: dialogueRect.top,
     leftWidth: parseFloat(leftStyle.width),
     rightWidth: parseFloat(rightStyle.width),
+    leftBottom: parseFloat(leftStyle.bottom),
+    rightBottom: parseFloat(rightStyle.bottom),
     leftCenter: (leftRect.left + leftRect.right) / 2,
     rightCenter: (rightRect.left + rightRect.right) / 2,
+    liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift')),
     compose: document.body.classList.contains('stage0j-compose-scene')
   };
 });
 
 assert(characters.rendered === true && characters.compose === false, 'Normal mobile scene did not render', JSON.stringify(characters));
-assert(characters.leftWidth >= characters.viewportWidth * 1.44 && characters.rightWidth >= characters.viewportWidth * 1.44,
-  'Portrait character canvas is still width-limited like the old 70vw layout', JSON.stringify(characters));
+assert(characters.leftWidth >= characters.viewportWidth * 1.35 && characters.leftWidth <= characters.viewportWidth * 1.37 &&
+       characters.rightWidth >= characters.viewportWidth * 1.35 && characters.rightWidth <= characters.viewportWidth * 1.37,
+  'Normal portrait characters are not at the refined ~136vw scale', JSON.stringify(characters));
 assert(Math.abs(characters.leftCenter - characters.viewportWidth * 0.20) <= 3,
   'Left character no longer keeps the desktop horizontal centre', JSON.stringify(characters));
 assert(Math.abs(characters.rightCenter - characters.viewportWidth * 0.80) <= 3,
   'Right character no longer keeps the desktop horizontal centre', JSON.stringify(characters));
+assert(characters.leftBottom >= 9 && characters.leftBottom <= 37 &&
+       characters.rightBottom >= 9 && characters.rightBottom <= 37 &&
+       Math.abs(characters.leftBottom - characters.liftVariable) <= 1,
+  'Normal portrait characters are not lifted from dialogue geometry', JSON.stringify(characters));
 
 await page.screenshot({ path: 'artifacts/mobile-character-layout.png' });
 
@@ -80,34 +91,48 @@ const phone = await page.evaluate(async () => {
   window.heartSyncMobileLayout();
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
+  const character = document.getElementById('character-right');
   const firstPhone = overlay.getBoundingClientRect();
   const firstDialogue = dialogue.getBoundingClientRect();
+  const firstCharacterStyle = getComputedStyle(character);
   const firstGap = firstDialogue.top - firstPhone.bottom;
+  const first = {
+    phoneTop: firstPhone.top,
+    phoneBottom: firstPhone.bottom,
+    dialogueTop: firstDialogue.top,
+    gap: firstGap,
+    characterWidth: parseFloat(firstCharacterStyle.width),
+    characterBottom: parseFloat(firstCharacterStyle.bottom),
+    characterZ: parseInt(firstCharacterStyle.zIndex, 10),
+    phoneZ: parseInt(getComputedStyle(overlay).zIndex, 10),
+    liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift'))
+  };
 
   dialogue.style.height = '320px';
-  await new Promise(resolve => setTimeout(resolve, 40));
+  await new Promise(resolve => setTimeout(resolve, 60));
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
   const secondPhone = overlay.getBoundingClientRect();
   const secondDialogue = dialogue.getBoundingClientRect();
+  const secondCharacterStyle = getComputedStyle(character);
   const secondGap = secondDialogue.top - secondPhone.bottom;
   const configuredGap = parseFloat(getComputedStyle(document.body).getPropertyValue('--phone-overlay-gap')) || 0;
+  const second = {
+    phoneTop: secondPhone.top,
+    phoneBottom: secondPhone.bottom,
+    dialogueTop: secondDialogue.top,
+    gap: secondGap,
+    characterWidth: parseFloat(secondCharacterStyle.width),
+    characterBottom: parseFloat(secondCharacterStyle.bottom),
+    liftVariable: parseFloat(getComputedStyle(document.body).getPropertyValue('--heart-mobile-character-lift'))
+  };
 
   return {
     rendered,
+    viewportWidth: innerWidth,
     configuredGap,
-    first: {
-      phoneTop: firstPhone.top,
-      phoneBottom: firstPhone.bottom,
-      dialogueTop: firstDialogue.top,
-      gap: firstGap
-    },
-    second: {
-      phoneTop: secondPhone.top,
-      phoneBottom: secondPhone.bottom,
-      dialogueTop: secondDialogue.top,
-      gap: secondGap
-    }
+    first,
+    second
   };
 });
 
@@ -119,6 +144,19 @@ assert(Math.abs(phone.second.gap - phone.configuredGap) <= 2.5,
   'Phone did not follow the dialogue when its height changed', JSON.stringify(phone));
 assert(phone.second.phoneTop < phone.first.phoneTop,
   'Phone did not move with the raised dialogue strip', JSON.stringify(phone));
+assert(phone.first.characterWidth >= phone.viewportWidth * 1.29 && phone.first.characterWidth <= phone.viewportWidth * 1.31 &&
+       phone.second.characterWidth >= phone.viewportWidth * 1.29 && phone.second.characterWidth <= phone.viewportWidth * 1.31,
+  'Compose character is still using the old 70vw mobile scale', JSON.stringify(phone));
+assert(phone.first.characterBottom >= 37 && phone.first.characterBottom <= 85 &&
+       Math.abs(phone.first.characterBottom - phone.first.liftVariable) <= 1,
+  'Compose character did not receive the stronger dialogue-relative lift', JSON.stringify(phone));
+assert(phone.second.characterBottom > phone.first.characterBottom &&
+       Math.abs(phone.second.characterBottom - phone.second.liftVariable) <= 1,
+  'Compose character did not rise when the dialogue strip grew upward', JSON.stringify(phone));
+assert(phone.first.characterZ < phone.first.phoneZ,
+  'Compose character must remain behind the smartphone overlay', JSON.stringify(phone));
+assert(phone.first.characterBottom > characters.leftBottom,
+  'Compose scene should lift the character more strongly than a normal scene', JSON.stringify({ characters, phone }));
 
 await page.screenshot({ path: 'artifacts/mobile-phone-layout.png' });
 console.log(JSON.stringify({ status: 'PASS', characters, phone }, null, 2));
