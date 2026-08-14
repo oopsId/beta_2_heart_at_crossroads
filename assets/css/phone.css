@@ -2,7 +2,8 @@
 html body.stage0j-compose-scene {
   --phone-overlay-min-top: 4px;
   --phone-overlay-top: var(--phone-overlay-min-top);
-  --phone-overlay-height: min(430px, calc(80vh - 166px));
+  --phone-overlay-height-cap: min(430px, calc(80vh - 166px));
+  --phone-overlay-height: var(--phone-overlay-height-cap);
   --phone-overlay-gap: 12px;
 }
 html body.stage0j-compose-scene #phone-compose-overlay {
@@ -12,15 +13,25 @@ html body.stage0j-compose-scene #phone-compose-overlay {
 @media (max-width: 800px) {
   html body.stage0j-compose-scene {
     --phone-overlay-min-top: 4px;
-    --phone-overlay-height: min(350px, 48vh, calc(80vh - 164px));
+    --phone-overlay-height-cap: min(350px, 48vh, calc(80vh - 164px));
     --phone-overlay-gap: 10px;
   }
 }
 
-/* Portrait phone sits immediately above the real dialogue strip, even when choices change its height. */
+/*
+ * Portrait phone sits immediately above the real dialogue strip. If a real choice stack
+ * grows too tall to leave room for the normal phone height, shrink the phone to the
+ * available space instead of letting it overlap the dialogue.
+ */
 @media (max-width: 800px) and (orientation: portrait) {
   html body.stage0j-compose-scene {
-    --phone-dialogue-top-fallback: calc(var(--phone-overlay-min-top) + var(--phone-overlay-height) + var(--phone-overlay-gap));
+    --phone-dialogue-top-fallback: calc(var(--phone-overlay-min-top) + var(--phone-overlay-height-cap) + var(--phone-overlay-gap));
+    --phone-overlay-available-height: calc(
+      var(--phone-dialogue-top, var(--phone-dialogue-top-fallback))
+      - var(--phone-overlay-gap)
+      - var(--phone-overlay-min-top)
+    );
+    --phone-overlay-height: min(var(--phone-overlay-height-cap), var(--phone-overlay-available-height));
     --phone-overlay-top: max(
       var(--phone-overlay-min-top),
       calc(var(--phone-dialogue-top, var(--phone-dialogue-top-fallback)) - var(--phone-overlay-height) - var(--phone-overlay-gap))
@@ -30,7 +41,7 @@ html body.stage0j-compose-scene #phone-compose-overlay {
 
 @media (max-height: 760px) {
   html body.stage0j-compose-scene {
-    --phone-overlay-height: min(300px, 36vh) !important;
+    --phone-overlay-height-cap: min(300px, 36vh);
   }
 }
 @media (max-height: 520px) and (orientation: landscape) {
@@ -54,4 +65,5 @@ html body.stage0j-compose-scene #phone-compose-overlay {
 html body.stage0j-compose-scene #phone-compose-overlay{left:50%!important;transform:translateX(-50%)!important;width:clamp(260px,18vw,320px)!important;min-width:0!important;min-height:0!important;max-height:none!important}
 #phone-compose-overlay .stage0j-phone-screen{background:#dcebd5 url('../backgrounds/bg_phone_ui.png') center/cover no-repeat!important}
 @media(max-width:800px){html body.stage0j-compose-scene #phone-compose-overlay{width:clamp(190px,48vw,240px)!important}}
+@media(max-width:800px) and (orientation:portrait){html body.stage0j-compose-scene #phone-compose-overlay{width:min(clamp(190px,48vw,240px),calc(var(--phone-overlay-height) * .68))!important}}
 @media(max-height:520px) and (orientation:landscape){html body.stage0j-compose-scene #phone-compose-overlay{width:min(150px,24vw)!important}}
