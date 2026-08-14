@@ -238,7 +238,7 @@
             "scenes": [
                 {
                     "id": 0,
-                    "background": "bg_webstudio_day",
+                    "background": "bg_webstudio_day_summer",
                     "characterLeft": "anna_smile_style1_summer",
                     "characterRight": "vika_happy_style1_summer",
                     "speaker": {
