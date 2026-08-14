@@ -16,6 +16,7 @@ EXPECTED_VENDOR_JS = [
 ]
 EXPECTED_JS = [
     "assets/js/core/foundation.js",
+    "assets/js/runtime/wheel-volume.js",
     "assets/js/core/story-runtime.js",
     "assets/js/core/endings-presentation.js",
     "assets/js/runtime/vn-behavior.js",
