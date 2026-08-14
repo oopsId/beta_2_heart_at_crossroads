@@ -134,6 +134,28 @@ html body.stage0j-compose-scene #game-container .dialogue-box {
   max-height: 50vh !important;
 }
 
+/*
+ * Portrait mobile used to make sprites tiny because the 70vw character canvas became
+ * the limiting dimension for background-size: contain. Widen the canvas enough that
+ * sprite height behaves like desktop while preserving the authored horizontal centres.
+ * Compose-phone scenes are excluded because their character/phone composition is separate.
+ */
+@media (max-width: 800px) and (orientation: portrait) {
+  html body:not(.stage0j-compose-scene) #character-left,
+  html body:not(.stage0j-compose-scene) #character-right {
+    width: 145vw !important;
+    max-width: none !important;
+  }
+
+  html body:not(.stage0j-compose-scene) #character-left {
+    left: calc(var(--heart-mobile-left-authored, -15%) - 37.5vw) !important;
+  }
+
+  html body:not(.stage0j-compose-scene) #character-right {
+    right: calc(var(--heart-mobile-right-authored, -15%) - 37.5vw) !important;
+  }
+}
+
 #gallery-container.stage0n.ru .n-sub {
   font-size: 0 !important;
 }
