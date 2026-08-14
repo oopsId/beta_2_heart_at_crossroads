@@ -4,10 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Сердце на перекрёстке — beta_2</title>
-    <meta http-equiv="refresh" content="0; url=heart_at_crossroads.html">
+    <meta http-equiv="refresh" content="0; url=heart_at_crossroads.html?dev=1">
 </head>
 <body>
-    <p><a href="heart_at_crossroads.html">Открыть игру</a></p>
-    <script>location.replace('heart_at_crossroads.html' + location.search + location.hash);</script>
+    <p><a href="heart_at_crossroads.html?dev=1">Открыть beta/dev игру</a></p>
+    <script>
+        const target = new URL('heart_at_crossroads.html', location.href);
+        const incoming = new URLSearchParams(location.search);
+        incoming.forEach((value, key) => target.searchParams.append(key, value));
+        if (!target.searchParams.has('dev')) target.searchParams.set('dev', '1');
+        target.hash = location.hash;
+        location.replace(target.href);
+    </script>
 </body>
 </html>
