@@ -37,6 +37,7 @@ const initial = await page.evaluate(() => {
   document.getElementById('game-container').style.display = 'block';
   document.getElementById('menu').style.display = 'flex';
   const button = document.getElementById('stats');
+  const devControl = document.getElementById('stage0k-dev-replay-control');
   button.style.display = 'none';
   window.heartSyncStatsVisibility();
 
@@ -48,7 +49,7 @@ const initial = await page.evaluate(() => {
     display: getComputedStyle(button).display,
     directOpen,
     panelExists: Boolean(document.getElementById('stats-panel-overlay')),
-    devControlVisible: getComputedStyle(document.getElementById('stage0k-dev-replay-control')).display !== 'none'
+    devControlVisible: devControl ? devControl.getClientRects().length > 0 : false
   };
 });
 
@@ -65,6 +66,7 @@ const devEnabled = await page.evaluate(() => {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('game-container').style.display = 'block';
   const button = document.getElementById('stats');
+  const devControl = document.getElementById('stage0k-dev-replay-control');
   button.style.display = 'none';
   window.heartSyncStatsVisibility();
   return {
@@ -74,7 +76,7 @@ const devEnabled = await page.evaluate(() => {
     forced: window.heartDevForceFirstPlaythrough(),
     devClass: document.documentElement.classList.contains('heart-dev-first-playthrough'),
     display: getComputedStyle(button).display,
-    devControlVisible: getComputedStyle(document.getElementById('stage0k-dev-replay-control')).display !== 'none',
+    devControlVisible: devControl ? devControl.getClientRects().length > 0 : false,
     attemptedRuntimeChange: heartSetDevForceFirstPlaythrough(false)
   };
 });
@@ -137,6 +139,7 @@ const devDisabled = await page.evaluate(() => {
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('game-container').style.display = 'block';
   const button = document.getElementById('stats');
+  const devControl = document.getElementById('stage0k-dev-replay-control');
   button.style.display = 'none';
   window.heartSyncStatsVisibility();
   return {
@@ -144,7 +147,7 @@ const devDisabled = await page.evaluate(() => {
     forced: window.heartDevForceFirstPlaythrough(),
     devClass: document.documentElement.classList.contains('heart-dev-first-playthrough'),
     display: getComputedStyle(button).display,
-    devControlVisible: getComputedStyle(document.getElementById('stage0k-dev-replay-control')).display !== 'none'
+    devControlVisible: devControl ? devControl.getClientRects().length > 0 : false
   };
 });
 if (!devDisabled.selected || devDisabled.forced || devDisabled.devClass || devDisabled.display !== 'none' || devDisabled.devControlVisible) {
