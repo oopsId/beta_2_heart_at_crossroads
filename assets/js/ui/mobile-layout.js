@@ -43,14 +43,15 @@
         }
 
         const rect = dialogue.getBoundingClientRect();
-        if (!Number.isFinite(rect.top)) return false;
+        if (!Number.isFinite(rect.top) || !Number.isFinite(rect.height)) return false;
 
         const dialogueTop = Math.max(0, rect.top);
-        const coveredHeight = Math.max(0, window.innerHeight - dialogueTop);
         const composeScene = body.classList.contains('stage0j-compose-scene');
+        // Normal scenes need only a small correction. Compose scenes must track the actual
+        // dialogue/choice stack much more strongly so a tall choice panel cannot climb over a face.
         const lift = composeScene
-            ? clamp(coveredHeight * 0.20, 38, 84)
-            : clamp(coveredHeight * 0.08, 10, 36);
+            ? clamp(rect.height * 0.45, 56, 190)
+            : clamp(rect.height * 0.08, 10, 36);
 
         body.style.setProperty('--heart-mobile-dialogue-top', `${dialogueTop.toFixed(2)}px`);
         body.style.setProperty('--heart-mobile-character-lift', `${lift.toFixed(2)}px`);
