@@ -16,7 +16,7 @@ const specialState = await special.evaluate(async () => {
     mode: window.heartDevMode,
     control: !!control,
     controlParent: control?.parentElement?.id,
-    controlVisible: control ? getComputedStyle(control).display !== 'none' : false,
+    controlVisible: control ? control.getClientRects().length > 0 : false,
     label: control?.textContent?.trim(),
     enabled,
     forced: heartDevForceFirstPlaythrough(),
@@ -40,7 +40,7 @@ const activeSnapshot = await special.evaluate(() => {
     generation,
     forced: heartDevForceFirstPlaythrough(),
     attemptedChange,
-    controlVisible: control ? getComputedStyle(control).display !== 'none' : false
+    controlVisible: control ? control.getClientRects().length > 0 : false
   };
 });
 if (!activeSnapshot.forced || activeSnapshot.attemptedChange !== false || activeSnapshot.controlVisible) {
@@ -119,7 +119,7 @@ const afterCompletion = await special.evaluate(async () => {
     forced: heartDevForceFirstPlaythrough(),
     replayTextPresent: Object.prototype.hasOwnProperty.call(scene, 'second_playthrough_text'),
     startVisible: getComputedStyle(document.getElementById('start-screen')).display !== 'none',
-    controlVisible: control ? getComputedStyle(control).display !== 'none' : false
+    controlVisible: control ? control.getClientRects().length > 0 : false
   };
 });
 if (beforeCompletion.completionCount !== 0 || afterCompletion.completionCount !== 0 || afterCompletion.profileCompletionCount !== 0) {
@@ -141,12 +141,13 @@ const normalRun = await special.evaluate(() => {
   const generation = beginRuntimeSession('mode-smoke-normal-run');
   document.getElementById('start-screen').style.display = 'none';
   const attemptedChange = heartSetDevForceFirstPlaythrough(true);
+  const control = document.getElementById('stage0k-dev-replay-control');
   return {
     disabled,
     generation,
     forced: heartDevForceFirstPlaythrough(),
     attemptedChange,
-    controlVisible: getComputedStyle(document.getElementById('stage0k-dev-replay-control')).display !== 'none'
+    controlVisible: control ? control.getClientRects().length > 0 : false
   };
 });
 if (!normalRun.disabled || normalRun.forced || normalRun.attemptedChange !== false || normalRun.controlVisible) {
