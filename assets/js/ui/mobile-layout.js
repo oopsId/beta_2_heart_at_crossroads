@@ -47,11 +47,12 @@
 
         const dialogueTop = Math.max(0, rect.top);
         const composeScene = body.classList.contains('stage0j-compose-scene');
-        // Normal scenes need only a small correction. Compose scenes must track the actual
-        // dialogue/choice stack much more strongly so a tall choice panel cannot climb over a face.
+        // Both modes follow the real dialogue height. Normal scenes lift enough to keep
+        // faces above a real choice stack; compose scenes need a stronger correction because
+        // the phone also occupies the space above the strip.
         const lift = composeScene
             ? clamp(rect.height * 0.45, 56, 190)
-            : clamp(rect.height * 0.08, 10, 36);
+            : clamp(rect.height * 0.30, 24, 110);
 
         body.style.setProperty('--heart-mobile-dialogue-top', `${dialogueTop.toFixed(2)}px`);
         body.style.setProperty('--heart-mobile-character-lift', `${lift.toFixed(2)}px`);
