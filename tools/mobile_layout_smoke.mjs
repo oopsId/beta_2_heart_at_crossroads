@@ -73,10 +73,10 @@ assert(Math.abs(characters.leftCenter - characters.viewportWidth * 0.20) <= 3,
   'Left character no longer keeps the desktop horizontal centre', JSON.stringify(characters));
 assert(Math.abs(characters.rightCenter - characters.viewportWidth * 0.80) <= 3,
   'Right character no longer keeps the desktop horizontal centre', JSON.stringify(characters));
-assert(characters.leftBottom >= 9 && characters.leftBottom <= 37 &&
-       characters.rightBottom >= 9 && characters.rightBottom <= 37 &&
+assert(characters.leftBottom >= 23 && characters.leftBottom <= 111 &&
+       characters.rightBottom >= 23 && characters.rightBottom <= 111 &&
        Math.abs(characters.leftBottom - characters.liftVariable) <= 1,
-  'Normal portrait characters are not lifted from dialogue geometry', JSON.stringify(characters));
+  'Normal portrait characters are not lifted from the real dialogue/choice height', JSON.stringify(characters));
 
 await page.screenshot({ path: 'artifacts/mobile-character-layout.png' });
 
