@@ -16,12 +16,13 @@ await page.waitForFunction(() =>
   typeof createChoiceButton === 'function'
 );
 
+// Exact normal scene from the reported mobile-browser screenshot: Anna + Sergey, three choices.
 const characters = await page.evaluate(async () => {
   const generation = beginRuntimeSession('mobile-layout-characters');
   resetGameState(false);
-  currentChapter = 1;
-  scriptData = await (await fetch('assets/data/chapter1.json')).json();
-  const scene = scriptData.scenes.find(candidate => candidate.id === 3);
+  currentChapter = 7;
+  scriptData = await (await fetch('assets/data/chapter7.json')).json();
+  const scene = scriptData.scenes.find(candidate => candidate.id === 12);
 
   document.getElementById('start-screen').style.display = 'none';
   document.getElementById('game-container').style.display = 'block';
@@ -49,6 +50,7 @@ const characters = await page.evaluate(async () => {
 
   return {
     rendered,
+    sceneId: scene?.id,
     viewportWidth: innerWidth,
     dialogueTop: dialogueRect.top,
     dialogueHeight: dialogueRect.height,
@@ -64,8 +66,9 @@ const characters = await page.evaluate(async () => {
   };
 });
 
-assert(characters.rendered === true && characters.compose === false, 'Normal mobile scene did not render', JSON.stringify(characters));
-assert(characters.choiceCount === 3, 'Normal mobile regression is not exercising its real choices', JSON.stringify(characters));
+assert(characters.rendered === true && characters.sceneId === 12 && characters.compose === false,
+  'Reported Sergey mobile scene did not render', JSON.stringify(characters));
+assert(characters.choiceCount === 3, 'Reported mobile regression is not exercising its real choices', JSON.stringify(characters));
 assert(characters.leftWidth >= characters.viewportWidth * 1.35 && characters.leftWidth <= characters.viewportWidth * 1.37 &&
        characters.rightWidth >= characters.viewportWidth * 1.35 && characters.rightWidth <= characters.viewportWidth * 1.37,
   'Normal portrait characters are not at the refined ~136vw scale', JSON.stringify(characters));
