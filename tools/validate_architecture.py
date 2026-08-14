@@ -21,6 +21,7 @@ EXPECTED_JS = [
     "assets/js/runtime/vn-behavior.js",
     "assets/js/render/scene-renderer.js",
     "assets/js/runtime/replay-progression.js",
+    "assets/js/ui/stats-panel.js",
     "assets/js/ui/gallery.js",
     "assets/js/ui/gallery-polish.js",
     "assets/js/progression/diamonds.js",
